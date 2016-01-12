@@ -22,7 +22,7 @@ The `kidney_solver` program has three required command-line arguments: cycle cap
 - picef: Position-indexed chain-edge formulation
 - cf: Cycle formulation, with one variable per cycle or chain
 
-In addition, the optional flag `-r` can be used to solve on a copy of the graph with vertices relabelled in descending order of out-degree plus in-degree, which may result in a smaller IP mode. To set a time limit of LIMIT seconds, use `-t LIMIT`.
+In addition, the optional flag `-r` can be used to solve on a copy of the graph with vertices relabelled in descending order of out-degree plus in-degree, which may result in a smaller IP model. To set a time limit of LIMIT seconds, use `-t LIMIT`.
 
 *Example 1:* .wmd format input
 
