@@ -72,7 +72,6 @@ def add_chain_vars_and_constraints(digraph, ndds, max_chain, m, vtx_to_vars):
             for i in range(max_chain-1):
                 if dists_from_ndd[e.src.id] <= i+1:
                     edge_var = m.addVar(vtype=GRB.BINARY)
-                    print "$"
                     e.grb_vars.append(edge_var)
                     vtx_to_vars[e.dest.id].append(edge_var)
                     e.src.grb_vars_out[i].append(edge_var)
