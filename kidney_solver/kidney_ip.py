@@ -48,41 +48,43 @@ def create_ip_model(time_limit):
     return m
 
 def add_chain_vars_and_constraints(digraph, ndds, max_chain, m, vtx_to_vars):
-    for v in digraph.vs:
-        v.grb_vars_in  = [[] for i in range(max_chain-1)]
-        v.grb_vars_out = [[] for i in range(max_chain-1)]
-
-    for ndd in ndds:
-        ndd_edge_vars = []
-        for e in ndd.edges:
-            edge_var = m.addVar(vtype=GRB.BINARY)
-            e.edge_var = edge_var
-            ndd_edge_vars.append(edge_var)
-            vtx_to_vars[e.target_v.id].append(edge_var)
-            if max_chain>1: e.target_v.grb_vars_in[0].append(edge_var)
-        m.update()
-        m.addConstr(quicksum(ndd_edge_vars) <= 1)
-
-    dists_from_ndd = kidney_utils.get_dist_from_nearest_ndd(digraph, ndds)
-
-    # Add pair->pair edge variables, indexed by position in chain
-    for e in digraph.es:
-        e.grb_vars = []
-        for i in range(max_chain-1):
-            if dists_from_ndd[e.src.id] <= i+1:
-                edge_var = m.addVar(vtype=GRB.BINARY)
-                e.grb_vars.append(edge_var)
-                vtx_to_vars[e.dest.id].append(edge_var)
-                e.src.grb_vars_out[i].append(edge_var)
-                if i < max_chain-2:
-                    e.dest.grb_vars_in[i+1].append(edge_var)
-
-    m.update()
-
-    # At each chain position, sum of edges into a vertex must be >= sum of edges out
-    for i in range(max_chain-1):
+    if max_chain > 0:
         for v in digraph.vs:
-            m.addConstr(quicksum(v.grb_vars_in[i]) >= quicksum(v.grb_vars_out[i]))
+            v.grb_vars_in  = [[] for i in range(max_chain-1)]
+            v.grb_vars_out = [[] for i in range(max_chain-1)]
+
+        for ndd in ndds:
+            ndd_edge_vars = []
+            for e in ndd.edges:
+                edge_var = m.addVar(vtype=GRB.BINARY)
+                e.edge_var = edge_var
+                ndd_edge_vars.append(edge_var)
+                vtx_to_vars[e.target_v.id].append(edge_var)
+                if max_chain>1: e.target_v.grb_vars_in[0].append(edge_var)
+            m.update()
+            m.addConstr(quicksum(ndd_edge_vars) <= 1)
+
+        dists_from_ndd = kidney_utils.get_dist_from_nearest_ndd(digraph, ndds)
+
+        # Add pair->pair edge variables, indexed by position in chain
+        for e in digraph.es:
+            e.grb_vars = []
+            for i in range(max_chain-1):
+                if dists_from_ndd[e.src.id] <= i+1:
+                    edge_var = m.addVar(vtype=GRB.BINARY)
+                    print "$"
+                    e.grb_vars.append(edge_var)
+                    vtx_to_vars[e.dest.id].append(edge_var)
+                    e.src.grb_vars_out[i].append(edge_var)
+                    if i < max_chain-2:
+                        e.dest.grb_vars_in[i+1].append(edge_var)
+
+        m.update()
+
+        # At each chain position, sum of edges into a vertex must be >= sum of edges out
+        for i in range(max_chain-1):
+            for v in digraph.vs:
+                m.addConstr(quicksum(v.grb_vars_in[i]) >= quicksum(v.grb_vars_out[i]))
 
 def add_unlimited_vars_and_constraints(digraph, ndds, m):
     for v in digraph.vs:
@@ -246,7 +248,7 @@ def optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit):
         
     return OptSolution(ip_model=m,
                        cycles=kidney_utils.selected_edges_to_cycles(digraph, cycle_start_vv, cycle_next_vv),
-                       chains=kidney_utils.get_optimal_chains(digraph, ndds),
+                       chains=[] if max_chain==0 else kidney_utils.get_optimal_chains(digraph, ndds),
                        digraph=digraph)
 
 def optimise_picef(digraph, ndds, max_cycle, max_chain, timelimit):
@@ -282,7 +284,7 @@ def optimise_picef(digraph, ndds, max_cycle, max_chain, timelimit):
 
     return OptSolution(ip_model=m,
                        cycles=[c for c, v in zip(cycles, cycle_vars) if v.x > 0.5],
-                       chains=kidney_utils.get_optimal_chains(digraph, ndds),
+                       chains=[] if max_chain==0 else kidney_utils.get_optimal_chains(digraph, ndds),
                        digraph=digraph)
 
 
