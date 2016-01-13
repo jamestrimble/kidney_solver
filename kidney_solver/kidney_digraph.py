@@ -201,23 +201,3 @@ def read_digraph_without_prob(lines):
         digraph.add_edge(DUMMY_PROB, score, digraph.vs[src_id], digraph.vs[dest_id])
     return digraph   
 
-class SortedEdgeStructure:
-    """A structure for quickly looking up the list of edges e such that
-       the source and target of e both have index >= some given i."""
-
-    def __init__(self, digraph):
-        self.edges = sorted(digraph.es, key=lambda e: min(e.src.id, e.dest.id))
-        # self.list_starts[i] is the position in the list of the first edge
-        # whose source and target are >= i. Everything to the left doesn't have
-        # this property, but everything to the right does.
-        self.list_starts = [len(self.edges)] * len(digraph.vs)
-        next_vtx = 0
-        for i, e in enumerate(self.edges):
-            min_id = min(e.src.id, e.dest.id)
-            if min_id >= next_vtx:
-                for j in range(next_vtx, min_id+1):
-                    self.list_starts[j] = i
-                next_vtx = min_id+1
-                
-
-

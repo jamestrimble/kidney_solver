@@ -150,24 +150,23 @@ def add_hpief_prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m)
     E = [[{} for __ in digraph.es] for __ in range(max_cycle)]
     vars_and_edges = []
     
-    ses = SortedEdgeStructure(digraph)
     for low_vtx in range(len(digraph.vs)-1):
         # Length of shortest path from low vertex to each vertex with a higher index
         # Default value is 999999999 (which represents infinity)
         shortest_path_from_lv = digraph.get_shortest_path_from_low_vtx(low_vtx, max_cycle-1) 
         shortest_path_to_lv = digraph.get_shortest_path_to_low_vtx(low_vtx, max_cycle-1) 
 
-        for j in xrange(ses.list_starts[low_vtx], len(ses.edges)):
-            e = ses.edges[j]
-            if e.src.id > low_vtx:
-                for pos in xrange(1, max_cycle):
-                    if (
-                                (e.dest.id==low_vtx or pos < max_cycle-1) and        
-                                shortest_path_from_lv[e.src.id] <= pos and
-                                shortest_path_to_lv[e.dest.id] < max_cycle - pos):
-                        new_var = m.addVar(vtype=GRB.BINARY)
-                        E[pos][e.id][low_vtx] = new_var
-                        vars_and_edges.append((new_var, pos, e, low_vtx))
+        for v1 in digraph.vs[low_vtx+1:]:
+            for e in v1.edges:
+                if e.dest.id >=low_vtx:
+                    for pos in xrange(1, max_cycle):
+                        if (
+                                    (e.dest.id==low_vtx or pos < max_cycle-1) and        
+                                    shortest_path_from_lv[e.src.id] <= pos and
+                                    shortest_path_to_lv[e.dest.id] < max_cycle - pos):
+                            new_var = m.addVar(vtype=GRB.BINARY)
+                            E[pos][e.id][low_vtx] = new_var
+                            vars_and_edges.append((new_var, pos, e, low_vtx))
     m.update()
 
     # edge_vars_in[pos][v][low_v] is a list of variables corresponding to edges
