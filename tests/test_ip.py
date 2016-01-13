@@ -41,7 +41,6 @@ def test_weighted_instance():
     """Checks that the capped formulations agree on the optimal
     result for an instance with weighted edges.
     """
-    EPS = 0.0001
     d, ndds = read_with_ndds("test-fixtures/100-random-weights")
     fns = [k_ip.optimise_hpief_prime,
             k_ip.optimise_picef, k_ip.optimise_ccf]
@@ -52,3 +51,18 @@ def test_weighted_instance():
             for fn in fns[1:]:
                 opt_result = fn(d, ndds, max_cycle, max_chain, None)
                 assert opt_result.total_score == opt_result_0.total_score
+
+def test_relabelled_solve():
+    """Checks whether the vertex-ordering heuristic affects the
+    result for a weighted instance
+    """
+    EPS = 0.000001
+    d, ndds = read_with_ndds("test-fixtures/100-random-weights")
+    for max_cycle in [0, 3]:
+        for max_chain in [0, 5]:
+            opt_result_0 = k_ip.optimise_picef(d, ndds, max_cycle, max_chain, None)
+            print opt_result_0.total_score
+            opt_result = k_ip.optimise_relabelled(
+                    k_ip.optimise_picef, d, ndds, max_cycle, max_chain, None)
+            print "   ", opt_result.total_score
+            assert abs(opt_result.total_score - opt_result_0.total_score) < EPS
