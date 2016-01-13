@@ -12,7 +12,6 @@ import kidney_utils
 import kidney_ndds
 
 def solve_kep(digraph, ndds, max_cycle, max_chain, formulation, timelimit, use_relabelled=True):
-    digraph.create_adj_mat()
 
     formulations = {
         "uef":  ("Uncapped edge formulation", kidney_ip.optimise_uuef),

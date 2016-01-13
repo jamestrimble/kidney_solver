@@ -13,7 +13,6 @@ def read_with_ndds(basename):
 
 def test_chains_only_instance():
     d, ndds = read_with_ndds("test-fixtures/no-cycles")
-    d.create_adj_mat()
     fns = [k_ip.optimise_uuef, k_ip.optimise_hpief_prime,
             k_ip.optimise_picef, k_ip.optimise_ccf]
     for max_chain in [0, 1, 2]:
@@ -27,7 +26,6 @@ def test_chains_only_instance():
 
 def test_single_cycle_instance():
     d, ndds = read_with_ndds("test-fixtures/one-cycle")
-    d.create_adj_mat()
     fns = [k_ip.optimise_uuef, k_ip.optimise_hpief_prime,
             k_ip.optimise_picef, k_ip.optimise_ccf]
     for max_chain in [0, 1, 2]:
@@ -45,7 +43,6 @@ def test_weighted_instance():
     """
     EPS = 0.0001
     d, ndds = read_with_ndds("test-fixtures/100-random-weights")
-    d.create_adj_mat()
     fns = [k_ip.optimise_hpief_prime,
             k_ip.optimise_picef, k_ip.optimise_ccf]
     for max_cycle in [0, 1, 2, 3, 4]:

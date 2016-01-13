@@ -14,9 +14,8 @@ def cycle_score(cycle, digraph):
     return val
 
 class Vertex:
-    def __init__(self, id, fail_prob):
+    def __init__(self, id):
         self.id = id
-        self.fail_prob = fail_prob
         self.edges = []
 
     def _add_edge(self, edge):
@@ -27,9 +26,8 @@ class Vertex:
                 ", ".join([str(e.dest.id) for e in self.edges]))
 
 class Edge:
-    def __init__(self, id, fail_prob, score, src, dest):
+    def __init__(self, id, score, src, dest):
         self.id = id
-        self.fail_prob = fail_prob
         self.score = score
         self.src = src   # source vertex
         self.dest = dest # destination vertex
@@ -38,23 +36,22 @@ class Edge:
         return ("V" + str(self.src.id) + "-V" + str(self.dest.id))
 
 class Digraph:
-    def __init__(self):
+    def __init__(self, n):
+        self.n = n
         self.vs = []
+        for i in range(n):
+            self.vs.append(Vertex(i))
+        self.adj_mat = [[None for x in range(n)] for x in range(n)]
         self.es = []
 
-    def add_vertex(self, fail_prob):
-        id = len(self.vs)
-        v = Vertex(id, fail_prob)
-        self.vs.append(v)
-        return id
-
-    def add_edge(self, fail_prob, score, source, dest):
+    def add_edge(self, score, source, dest):
         id = len(self.es)
         v_s = self.vs[source.id]
         v_d = self.vs[dest.id]
-        e = Edge(id, fail_prob, score, v_s, v_d)
+        e = Edge(id, score, v_s, v_d)
         self.es.append(e)
         v_s.edges.append(e)
+        self.adj_mat[source.id][dest.id] = e
         return e
     
     def find_cycles(self, max_length):
@@ -152,34 +149,23 @@ class Digraph:
     def edge_exists(self, v1, v2):
         return self.adj_mat[v1.id][v2.id] is not None
                     
-    def create_adj_mat(self):
-        n = len(self.vs)
-        self.adj_mat = [[None for x in range(n)] for x in range(n)]
-        for e in self.es:
-            self.adj_mat[e.src.id][e.dest.id] = e
-
     def induced_subgraph(self, vertices):
-        subgraph = Digraph()
-        for v in vertices:
-            subgraph.add_vertex(v.fail_prob)
+        subgraph = Digraph(len(vertices))
         for (i,v) in enumerate(vertices):
             for (j,w) in enumerate(vertices):
                 e = self.adj_mat[v.id][w.id]
                 if e is not None:
                     new_src = subgraph.vs[i]
                     new_dest = subgraph.vs[j]
-                    subgraph.add_edge(e.fail_prob, e.score, new_src, new_dest)
+                    subgraph.add_edge(e.score, new_src, new_dest)
         return subgraph
 
     def __str__(self):
         return "\n".join([str(v) for v in self.vs])
         
 def read_digraph_without_prob(lines):
-    DUMMY_PROB = 0
-    digraph = Digraph()
     vtx_count, edge_count = [int(x) for x in lines[0].split()]
-    for i in range(vtx_count):
-        digraph.add_vertex(DUMMY_PROB)
+    digraph = Digraph(vtx_count)
     for line in lines[1:edge_count+1]:
         tokens = [x for x in line.split()]
         src_id = int(tokens[0])
@@ -188,6 +174,6 @@ def read_digraph_without_prob(lines):
             raise KidneyReadException("Self-loop from {0} to {0} not permitted".format(src_id))
         score = float(tokens[2])
             
-        digraph.add_edge(DUMMY_PROB, score, digraph.vs[src_id], digraph.vs[dest_id])
+        digraph.add_edge(score, digraph.vs[src_id], digraph.vs[dest_id])
     return digraph   
 

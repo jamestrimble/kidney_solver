@@ -336,7 +336,6 @@ def optimise_relabelled(formulation_fun, digraph, ndds, max_cycle, max_chain, ti
                              reverse=True)
     
     relabelled_digraph = digraph.induced_subgraph(sorted_vertices)
-    relabelled_digraph.create_adj_mat()
 
     # old_to_new_vtx[i] is the vertex in the new graph corresponding to vertex
     # i in the original digraph

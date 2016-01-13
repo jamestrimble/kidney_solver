@@ -37,7 +37,6 @@ def test_shortest_path():
 
 def test_find_cycles():
     d = read("test-fixtures/100.input")
-    d.create_adj_mat()
     max_cycle = 5
     start = time.time()
     cycles = d.find_cycles(max_cycle)
