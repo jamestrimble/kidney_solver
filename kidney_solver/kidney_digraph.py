@@ -137,7 +137,8 @@ class Digraph:
 
         while q:
             v = q.popleft()
-            if distances[v.id] == max_dist:
+            #Note: >= is used instead of == on next line in case max_dist<0
+            if distances[v.id] >= max_dist:
                 break
             for w in adj_list_accessor(v):
                 if distances[w.id] == 999999999:

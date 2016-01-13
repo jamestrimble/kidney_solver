@@ -39,3 +39,13 @@ cat example_data/MD-00001-00000100.input example_data/MD-00001-00000100.ndds | p
 ## Output
 
 The output should be mostly self-explanatory. Each row for the `cycles` listing is a list of donor-patient pair indices. Each row of the `chains` listing is the NDD index, followed by a list of donor-patient pair indices.
+
+## Utility to count cycles and chains
+
+A Python utility for counting cycles and chains in an instance is also included. This reads from standard input and takes the cycle and chain caps as command-line arguments. Example usage:
+
+```
+cat example_data/MD-00001-00000100.input example_data/MD-00001-00000100.ndds | python kidney_solver/count_cycles_and_chains.py 3 3
+```
+
+Note that this will probably run quite a bit quicker if you use Pypy rather than CPython.
