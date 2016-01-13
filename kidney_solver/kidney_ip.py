@@ -169,9 +169,7 @@ def add_hpief_prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m)
             for e in v1.edges:
                 if e.dest.id >=low_vtx:
                     for pos in xrange(1, max_cycle):
-                        if (
-                                    (e.dest.id==low_vtx or pos < max_cycle-1) and        
-                                    shortest_path_from_lv[e.src.id] <= pos and
+                        if (shortest_path_from_lv[e.src.id] <= pos and
                                     shortest_path_to_lv[e.dest.id] < max_cycle - pos):
                             new_var = m.addVar(vtype=GRB.BINARY)
                             vars_and_edges.append((new_var, pos, e, low_vtx))
