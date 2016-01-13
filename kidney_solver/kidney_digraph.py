@@ -57,20 +57,6 @@ class Digraph:
         v_s.edges.append(e)
         return e
     
-    def create_relabelled_copy(self, new_vtx_labels):
-        old_vtx_labels = [None] * len(self.vs)
-        for i in range(len(self.vs)):
-            old_vtx_labels[new_vtx_labels[i]] = i
-        new_digraph = Digraph()
-        for i in range(len(self.vs)):
-            old_vtx = self.vs[old_vtx_labels[i]]
-            new_digraph.add_vertex(old_vtx.fail_prob)
-        for e in self.es:
-            new_src = new_digraph.vs[new_vtx_labels[e.src.id]]
-            new_dest = new_digraph.vs[new_vtx_labels[e.dest.id]]
-            new_digraph.add_edge(e.fail_prob, e.score, new_src, new_dest)
-        return new_digraph
-
     def find_cycles(self, max_length):
         """Find cycles of length up to max_length in the digraph.
 
