@@ -147,9 +147,18 @@ def optimise_uuef(digraph, ndds, max_cycle, max_chain, timelimit):
 def add_hpief_prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m):
     n = len(digraph.vs)
 
-    E = [[{} for __ in digraph.es] for __ in range(max_cycle)]
-    vars_and_edges = []
+    vars_and_edges = [] # A list of (gurobi_var, position, edge, low_vertex) tuples
     
+    # Index i is in the list edge_vars_in[pos][v][low_v] if and only if
+    # vars_and_edges[i] corresponds to an edge at position pos, pointing to vertex
+    # v, in low_v's graph copy 
+    edge_vars_in = [[[[] for __ in range(n)] for __ in range(n)] for __ in range(max_cycle)]
+
+    # Index i is in the list edge_vars_out[pos][v][low_v] if and only if
+    # vars_and_edges[i] corresponds to an edge at position pos, leaving vertex
+    # v, in low_v's graph copy 
+    edge_vars_out = [[[[] for __ in range(n)] for __ in range(n)] for __ in range(max_cycle)]
+
     for low_vtx in range(len(digraph.vs)-1):
         # Length of shortest path from low vertex to each vertex with a higher index
         # Default value is 999999999 (which represents infinity)
@@ -165,40 +174,28 @@ def add_hpief_prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m)
                                     shortest_path_from_lv[e.src.id] <= pos and
                                     shortest_path_to_lv[e.dest.id] < max_cycle - pos):
                             new_var = m.addVar(vtype=GRB.BINARY)
-                            E[pos][e.id][low_vtx] = new_var
                             vars_and_edges.append((new_var, pos, e, low_vtx))
+                            idx = len(vars_and_edges) - 1 # Index of tuple just added
+                            edge_vars_in[pos][e.dest.id][low_vtx].append(idx)
+                            edge_vars_out[pos][e.src.id][low_vtx].append(idx)
     m.update()
-
-    # edge_vars_in[pos][v][low_v] is a list of variables corresponding to edges
-    # at position pos that lead to v, in low_v's copy of the graph
-    edge_vars_in = [[[[] for __ in range(n)] for __ in range(n)] for __ in range(max_cycle)]
-
-    edge_vars_out = [[[[] for __ in range(n)] for __ in range(n)] for __ in range(max_cycle)]
     
-    for pos in range(max_cycle):
-        for edge_id in range(len(digraph.es)):
-            for low_v_id in E[pos][edge_id]:
-                edge_var = E[pos][edge_id][low_v_id]
-                edge = digraph.es[edge_id]
-                row = edge.src.id
-                col = edge.dest.id
-                if pos==1:
-                    vtx_to_in_edges[row].append(edge_var)
-                vtx_to_in_edges[col].append(edge_var)
-                if col != low_v_id:
-                    edge_vars_in[pos][col][low_v_id].append(edge_var)
-                if row != low_v_id:
-                    edge_vars_out[pos][row][low_v_id].append(edge_var)
-    
+    for grb_var, pos, edge, low_vtx in vars_and_edges:
+        vtx_to_in_edges[edge.dest.id].append(grb_var)
+        if pos==1:
+            vtx_to_in_edges[edge.src.id].append(grb_var)
+        
+    # Capacity constraint for vertices
     for l in vtx_to_in_edges:
         if len(l) > 0:
             m.addConstr(quicksum(l) <= 1)
     
+    # Cycle flow-conservation constraint for vertices
     for pos in range(1, max_cycle-1):
         for v in range(n):
-            for low_v_id in range(v+1):
-                in_vars = edge_vars_in[pos][v][low_v_id]
-                out_vars = edge_vars_out[pos+1][v][low_v_id]
+            for low_v_id in range(v):
+                in_vars  = [vars_and_edges[i][0] for i in edge_vars_in[pos][v][low_v_id]]
+                out_vars = [vars_and_edges[i][0] for i in edge_vars_out[pos+1][v][low_v_id]]
                 if len(in_vars) > 0 or len(out_vars) > 0:
                     m.addConstr(quicksum(in_vars) == quicksum(out_vars))
 
