@@ -1,5 +1,7 @@
 import time
 
+import nose.tools
+
 from kidney_solver.kidney_digraph import *
 from simple_find_cycles import simple_find_cycles
 
@@ -46,3 +48,7 @@ def test_find_cycles():
     print time.time() - start
     assert len(cycles) > 100
     assert len(slow_cycles) == len(cycles)
+
+@nose.tools.raises(KidneyReadException)
+def test_raises_exception_on_self_loop():
+    d = read("test-fixtures/self-loop.input")

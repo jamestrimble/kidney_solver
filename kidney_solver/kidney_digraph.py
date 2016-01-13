@@ -1,5 +1,8 @@
 from collections import deque
 
+class KidneyReadException(Exception):
+    pass
+
 def cycle_score(cycle, digraph):
     val = 0
     cycle_len = len(cycle)
@@ -173,7 +176,6 @@ class Digraph:
         subgraph = Digraph()
         for v in vertices:
             subgraph.add_vertex(v.fail_prob)
-#            subgraph.vs[-1].id_in_original_digraph = v.id
         for (i,v) in enumerate(vertices):
             for (j,w) in enumerate(vertices):
                 e = self.adj_mat[v.id][w.id]
@@ -196,6 +198,8 @@ def read_digraph_without_prob(lines):
         tokens = [x for x in line.split()]
         src_id = int(tokens[0])
         dest_id = int(tokens[1])
+        if src_id == dest_id:
+            raise KidneyReadException("Self-loop from {0} to {0} not permitted".format(src_id))
         score = float(tokens[2])
             
         digraph.add_edge(DUMMY_PROB, score, digraph.vs[src_id], digraph.vs[dest_id])
