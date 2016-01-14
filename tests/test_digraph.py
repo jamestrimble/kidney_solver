@@ -60,3 +60,31 @@ def test_find_cycles():
 @nose.tools.raises(KidneyReadException)
 def test_raises_exception_on_self_loop():
     d = read("test-fixtures/self-loop.input")
+
+@nose.tools.raises(KidneyReadException)
+def test_raises_exception_on_duplicate_edge():
+    d = read("test-fixtures/duplicate-edge.input")
+
+@nose.tools.raises(KidneyReadException)
+def test_raises_exception_on_incorrect_edge_count_1():
+    d = read("test-fixtures/incorrect_edge_count1.input")
+
+@nose.tools.raises(KidneyReadException)
+def test_raises_exception_on_incorrect_edge_count_2():
+    d = read("test-fixtures/incorrect_edge_count2.input")
+
+@nose.tools.raises(KidneyReadException)
+def test_raises_exception_on_index_out_of_range_1():
+    d = read("test-fixtures/out-of-range1.input")
+
+@nose.tools.raises(KidneyReadException)
+def test_raises_exception_on_index_out_of_range_2():
+    d = read("test-fixtures/out-of-range2.input")
+
+@nose.tools.raises(KidneyReadException)
+def test_raises_exception_on_index_out_of_range_3():
+    d = read("test-fixtures/out-of-range3.input")
+
+@nose.tools.raises(KidneyReadException)
+def test_raises_exception_on_index_out_of_range_4():
+    d = read("test-fixtures/out-of-range4.input")

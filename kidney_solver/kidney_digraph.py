@@ -9,7 +9,12 @@ class KidneyReadException(Exception):
     pass
 
 def cycle_score(cycle, digraph):
-    """Calculate the sum of a cycle's edge scores."""
+    """Calculate the sum of a cycle's edge scores.
+
+    Args:
+        cycle: A list of Vertex objects in the cycle, with the first Vertex not repeated.
+        digraph: The digraph in which this cycle appears.
+    """
 
     return sum(digraph.adj_mat[cycle[i-1].id][cycle[i].id].score
                     for i in range(len(cycle)))
