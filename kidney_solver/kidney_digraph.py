@@ -1,31 +1,32 @@
+"""A Digraph class which can be used for representing donor-patient pairs
+(as vertices) and their compatibilities (as weighted edges), along with
+some related methods.
+"""
+
 from collections import deque
 
 class KidneyReadException(Exception):
     pass
 
 def cycle_score(cycle, digraph):
-    val = 0
-    cycle_len = len(cycle)
-    for i in range(cycle_len):
-        v1 = cycle[i]
-        v2 = cycle[(i+1) % cycle_len]
-        edge = digraph.adj_mat[v1.id][v2.id]
-        val += edge.score
-    return val
+    """Calculate the sum of a cycle's edge scores."""
+
+    return sum(digraph.adj_mat[cycle[i-1].id][cycle[i].id].score
+                    for i in range(len(cycle)))
 
 class Vertex:
+    """A vertex in a directed graph (see the Digraph class)."""
+
     def __init__(self, id):
         self.id = id
         self.edges = []
 
-    def _add_edge(self, edge):
-        self.edges.append(edge)
-        
     def __str__(self):
-        return ("V" + str(self.id) + "  with edges to " +
-                ", ".join([str(e.dest.id) for e in self.edges]))
+        return ("V{}".format(self.id))
 
 class Edge:
+    """An edge in a directed graph (see the Digraph class)."""
+
     def __init__(self, id, score, src, dest):
         self.id = id
         self.score = score
@@ -36,48 +37,61 @@ class Edge:
         return ("V" + str(self.src.id) + "-V" + str(self.dest.id))
 
 class Digraph:
+    """A directed graph, in which each edge has a numeric score.
+
+    Data members:
+        n: the number of vertices in the digraph
+        vs: an array of Vertex objects, such that vs[i].id == i
+        es: an array of Edge objects, such that es[i].id = i
+    """
+
     def __init__(self, n):
+        """Create a Digraph with n vertices"""
         self.n = n
-        self.vs = []
-        for i in range(n):
-            self.vs.append(Vertex(i))
+        self.vs = [Vertex(i) for i in range(n)]
         self.adj_mat = [[None for x in range(n)] for x in range(n)]
         self.es = []
 
     def add_edge(self, score, source, dest):
+        """Add an edge to the digraph
+
+        Args:
+            score: the edge's score, as a float
+            source: the source Vertex
+            dest: the edge's target Vertex
+        """
+
         id = len(self.es)
-        v_s = self.vs[source.id]
-        v_d = self.vs[dest.id]
-        e = Edge(id, score, v_s, v_d)
+        e = Edge(id, score, source, dest)
         self.es.append(e)
-        v_s.edges.append(e)
+        source.edges.append(e)
         self.adj_mat[source.id][dest.id] = e
-        return e
     
     def find_cycles(self, max_length):
         """Find cycles of length up to max_length in the digraph.
 
-        Return value: a list of cycles, in which each cycle is represented
-        as a list of vertices, with the first vertex not repeated.
+        Returns:
+            a list of cycles. Each cycle is represented as a list of
+            vertices, with the first vertex _not_ repeated at the end.
         """
 
         cycles = []
-        vtx_used = [False] * len(self.vs)
+        vtx_used = [False] * len(self.vs)  # vtx_used[i]==True iff vertex i is in current path
 
-        def cycle(current_list):
-            last_vtx = current_list[-1]
-            if self.edge_exists(last_vtx, current_list[0]):
-                cycles.append(current_list[:])
-            if len(current_list) < max_length:
+        def cycle(current_path):
+            last_vtx = current_path[-1]
+            if self.edge_exists(last_vtx, current_path[0]):
+                cycles.append(current_path[:])
+            if len(current_path) < max_length:
                 for e in last_vtx.edges: 
                     v = e.dest
-                    if (len(current_list) + shortest_paths_to_low_vtx[v.id] <= max_length
+                    if (len(current_path) + shortest_paths_to_low_vtx[v.id] <= max_length
                                 and not vtx_used[v.id]):
-                        current_list.append(v)
+                        current_path.append(v)
                         vtx_used[v.id] = True
-                        cycle(current_list)
+                        cycle(current_path)
                         vtx_used[v.id] = False
-                        del current_list[-1]
+                        del current_path[-1]
 
         # Adjacency lists for transpose graph
         transp_adj_lists = [[] for v in self.vs]
@@ -124,10 +138,10 @@ class Digraph:
         If the shortest path to a vertex is greater than max_dist, the list element
         will be 999999999.
 
-        Arguments:
-        from_v -- The starting vertex
-        max_dist -- The maximum distance we're interested in
-        adj_list_accessor -- An function taking a vertex and returning an
+        Args:
+            from_v: The starting vertex
+            max_dist: The maximum distance we're interested in
+            adj_list_accessor: A function taking a vertex and returning an
                 iterable of out-edge targets
         """
         # Breadth-first search
@@ -148,12 +162,16 @@ class Digraph:
         return distances
 
     def edge_exists(self, v1, v2):
+        """Returns true if and only if an edge exists from Vertex v1 to Vertex v2."""
+
         return self.adj_mat[v1.id][v2.id] is not None
                     
     def induced_subgraph(self, vertices):
+        """Returns the subgraph indiced by a given list of vertices."""
+
         subgraph = Digraph(len(vertices))
-        for (i,v) in enumerate(vertices):
-            for (j,w) in enumerate(vertices):
+        for i, v in enumerate(vertices):
+            for j, w in enumerate(vertices):
                 e = self.adj_mat[v.id][w.id]
                 if e is not None:
                     new_src = subgraph.vs[i]
@@ -164,7 +182,9 @@ class Digraph:
     def __str__(self):
         return "\n".join([str(v) for v in self.vs])
         
-def read_digraph_without_prob(lines):
+def read_digraph(lines):
+    """Reads a digraph from an array of strings in the input format."""
+
     vtx_count, edge_count = [int(x) for x in lines[0].split()]
     digraph = Digraph(vtx_count)
     for line in lines[1:edge_count+1]:

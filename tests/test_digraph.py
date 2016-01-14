@@ -8,7 +8,16 @@ from simple_find_cycles import simple_find_cycles
 def read(filename):
     with open(filename) as f:
         lines = f.readlines()
-    return read_digraph_without_prob(lines)
+    return read_digraph(lines)
+
+def test_cycle_score():
+    d = Digraph(4)
+    d.add_edge(1.5, d.vs[0], d.vs[1])
+    d.add_edge(1, d.vs[1], d.vs[2])
+    d.add_edge(1, d.vs[2], d.vs[3])
+    d.add_edge(1, d.vs[3], d.vs[0])
+    c = [d.vs[i] for i in range(4)]
+    assert cycle_score(c, d) == 4.5
 
 def test_shortest_path():
     d = read("test-fixtures/small1.input")

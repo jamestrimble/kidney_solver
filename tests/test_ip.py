@@ -5,7 +5,7 @@ import kidney_solver.kidney_ndds as k_ndds
 def read_with_ndds(basename):
     with open(basename + ".input") as f:
         lines = f.readlines()
-    d = read_digraph_without_prob(lines)
+    d = read_digraph(lines)
     with open(basename + ".ndds") as f:
         lines = f.readlines()
     ndds = k_ndds.read_ndds(lines, d)

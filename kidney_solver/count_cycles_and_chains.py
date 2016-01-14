@@ -85,7 +85,7 @@ def start():
     n_digraph_edges = int(input_lines[0].split()[1])
     digraph_lines = input_lines[:n_digraph_edges + 2]
 
-    d = kidney_digraph.read_digraph_without_prob(digraph_lines)
+    d = kidney_digraph.read_digraph(digraph_lines)
 
     if len(input_lines) > len(digraph_lines):
         ndd_lines = input_lines[n_digraph_edges + 2:]
