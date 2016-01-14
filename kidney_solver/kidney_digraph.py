@@ -191,10 +191,20 @@ def read_digraph(lines):
         tokens = [x for x in line.split()]
         src_id = int(tokens[0])
         dest_id = int(tokens[1])
+        if src_id < 0 or src_id >= vtx_count:
+            raise KidneyReadException("Vertex index {} out of range.".format(src_id))
+        if dest_id < 0 or dest_id >= vtx_count:
+            raise KidneyReadException("Vertex index {} out of range.".format(dest_id))
         if src_id == dest_id:
             raise KidneyReadException("Self-loop from {0} to {0} not permitted".format(src_id))
+        if digraph.edge_exists(digraph.vs[src_id], digraph.vs[dest_id]):
+            raise KidneyReadException("Duplicate edge from {} to {}".format(src_id, dest_id))
         score = float(tokens[2])
             
         digraph.add_edge(score, digraph.vs[src_id], digraph.vs[dest_id])
-    return digraph   
+
+    if lines[edge_count+1].split()[0] != "-1" or len(lines) < edge_count+2:
+        raise KidneyReadException("Incorrect edge count")
+
+    return digraph
 
