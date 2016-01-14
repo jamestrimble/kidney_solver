@@ -1,3 +1,5 @@
+"""Solving the kidney-exchange problem using the Gurobi IP solver."""
+
 from kidney_digraph import *
 from kidney_ndds import *
 import kidney_utils
@@ -5,6 +7,17 @@ import kidney_utils
 from gurobipy import *
 
 class OptSolution(object):
+    """An optimal solution for a kidney-exchange problem instance.
+    
+    Data members:
+        ip_model: The Gurobi Model object
+        cycles: A list of cycles in the optimal solution, each represented
+            as a list of vertices
+        chains: A list of chains in the optimal solution, each represented
+            as a Chain object
+        total_score: The total score of the solution
+    """
+
     def __init__(self, ip_model, cycles, chains, digraph):
         self.ip_model = ip_model
         self.cycles = cycles
@@ -14,6 +27,8 @@ class OptSolution(object):
                 sum(cycle_score(c, digraph) for c in cycles))
 
     def display(self):
+        """Print the optimal cycles and chains to standard output."""
+
         print "cycle_count: {}".format(len(self.cycles))
         print "chain_count: {}".format(len(self.chains))
         print "cycles:"
@@ -32,6 +47,14 @@ class OptSolution(object):
             print str(c.ndd_index) + "\t" + "\t".join(str(v) for v in c.vtx_indices)
 
     def relabelled_copy(self, old_to_new_vertices, new_digraph):
+        """Create a copy of the solution with vertices relabelled.
+
+        If the solution was found on a relabelled copy of the instance digraph, this
+        method can be used to transform the solution back to the original digraph. Each
+        Vertex v in the OptSolution on which this method is called is replaced in the
+        returned copy by old_to_new_vertices[v.id].
+        """
+
         relabelled_cycles = [[old_to_new_vertices[v.id] for v in c] for c in self.cycles]
         relabelled_chains = [Chain(c.ndd_index,
                                    [old_to_new_vertices[i].id for i in c.vtx_indices],
@@ -40,6 +63,8 @@ class OptSolution(object):
         return OptSolution(self.ip_model, relabelled_cycles, relabelled_chains, new_digraph)
 
 def create_ip_model(time_limit):
+    """Create a Gurobi Model."""
+
     m = Model("kidney-mip")
     m.params.outputflag = 0
     m.params.mipGap = 0
@@ -48,6 +73,17 @@ def create_ip_model(time_limit):
     return m
 
 def add_chain_vars_and_constraints(digraph, ndds, max_chain, m, vtx_to_vars):
+    """Add the IP variables and constraints for chains in PICEF and HPIEF'.
+
+    Args:
+        ndds: a list of NDDs in the instance
+        max_chain: the chain cap
+        m: The Gurobi model
+        vtx_to_vars: A list such that for each Vertex v in the Digraph,
+            vtx_to_vars[v.id] will contain the Gurobi variables representing
+            edges pointing to v.
+    """
+
     if max_chain > 0:
         for v in digraph.vs:
             v.grb_vars_in  = [[] for i in range(max_chain-1)]
@@ -86,6 +122,14 @@ def add_chain_vars_and_constraints(digraph, ndds, max_chain, m, vtx_to_vars):
                 m.addConstr(quicksum(v.grb_vars_in[i]) >= quicksum(v.grb_vars_out[i]))
 
 def add_unlimited_vars_and_constraints(digraph, ndds, m):
+    """Add the IP variables and constraints for chains in the uncapped edge formulation. 
+
+    Args:
+        digraph: the instance digraph
+        ndds: a list of NDDs in the instance
+        m: The Gurobi model
+    """
+
     for v in digraph.vs:
         v.grb_vars_in  = []
         v.grb_vars_out = []
@@ -119,6 +163,18 @@ def add_unlimited_vars_and_constraints(digraph, ndds, m):
         m.addConstr(quicksum(v.grb_vars_in) >= quicksum(v.grb_vars_out))
 
 def optimise_uuef(digraph, ndds, max_cycle, max_chain, timelimit):
+    """Optimise using the uncapped edge formulation.
+
+    Args:
+        ndds: NDDs in the instance
+        max_cycle: the cycle cap
+        max_chain: the chain cap
+        timelimit: the Gurobi timeout in seconds, or None for no timeout
+
+    Returns:
+        an OptSolution object
+    """
+
     m = create_ip_model(timelimit)
 
     add_unlimited_vars_and_constraints(digraph, ndds, m)
@@ -200,6 +256,18 @@ def add_hpief_prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m)
     return vars_and_edges
 
 def optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit):
+    """Optimise using the HPIEF' formulation.
+
+    Args:
+        ndds: NDDs in the instance
+        max_cycle: the cycle cap
+        max_chain: the chain cap
+        timelimit: the Gurobi timeout in seconds, or None for no timeout
+
+    Returns:
+        an OptSolution object
+    """
+
     # This IP model is based on HPIEF, but does not include cycle-edges at position zero.
     
     m = create_ip_model(timelimit)
@@ -245,6 +313,18 @@ def optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit):
                        digraph=digraph)
 
 def optimise_picef(digraph, ndds, max_cycle, max_chain, timelimit):
+    """Optimise using the PICEF formulation.
+
+    Args:
+        ndds: NDDs in the instance
+        max_cycle: the cycle cap
+        max_chain: the chain cap
+        timelimit: the Gurobi timeout in seconds, or None for no timeout
+
+    Returns:
+        an OptSolution object
+    """
+
     cycles = digraph.find_cycles(max_cycle)
 
     m = create_ip_model(timelimit)
@@ -282,6 +362,18 @@ def optimise_picef(digraph, ndds, max_cycle, max_chain, timelimit):
 
 
 def optimise_ccf(digraph, ndds, max_cycle, max_chain, timelimit):
+    """Optimise using the cycle formulation (with one var per cycle and one var per chain).
+
+    Args:
+        ndds: NDDs in the instance
+        max_cycle: the cycle cap
+        max_chain: the chain cap
+        timelimit: the Gurobi timeout in seconds, or None for no timeout
+
+    Returns:
+        an OptSolution object
+    """
+
     cycles = digraph.find_cycles(max_cycle)
     chains = find_chains(digraph, ndds, max_chain)
         
@@ -321,7 +413,9 @@ def optimise_ccf(digraph, ndds, max_cycle, max_chain, timelimit):
                        digraph=digraph)
 
 def optimise_relabelled(formulation_fun, digraph, ndds, max_cycle, max_chain, timelimit):
-    # Sort vertices in descending order of (indegree + outdegree)
+    """Optimise on a relabelled graph such that vertices are sorted in descending
+        order of (indegree + outdegree)"""
+
     in_degs = [0] * len(digraph.vs)
     for e in digraph.es:
         in_degs[e.dest.id] += 1
