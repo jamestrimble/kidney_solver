@@ -19,9 +19,9 @@ The `kidney_solver` program has three required command-line arguments: cycle cap
 
 - uef: Edge formulation with unrestricted cycle and chain sizes
 - hpief\_prime: A hybrid PIEF with an additional refinement that avoids the need for variables in first position
-- hpief\_prime\full\_red: hpief\_prime, with further reduction by generating cycles
+- hpief\_prime\_full\_red: hpief\_prime, with further reduction by generating cycles
 - hpief\_2prime: hpief\_prime, with an additional refinement that avoids the need for variables in position equal to the cycle cap. Note that if the cycle cap is less than 3, hpief\_prime is used instead.
-- hpief\_2prime\full\_red: hpief\_2prime, with further reduction by generating cycles
+- hpief\_2prime\_full\_red: hpief\_2prime, with further reduction by generating cycles
 - picef: Position-indexed chain-edge formulation
 - cf: Cycle formulation, with one variable per cycle or chain
 
