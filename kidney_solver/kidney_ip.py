@@ -406,16 +406,7 @@ def optimise_hpief_prime_full_red(digraph, ndds, max_cycle, max_chain, timelimit
 #                                                                                                 #
 ###################################################################################################
 
-def find_2_cycles(digraph):
-    """Return a list of 2-cycles in a digraph"""
-    two_cycles = []
-    for v in digraph.vs:
-        for e in v.edges:
-            if e.dest.id > v.id and digraph.edge_exists(e.dest, v):
-                two_cycles.append([v, e.dest])
-    return two_cycles
-
-def add_hpief_2prime_edge_vars_partial_red(max_cycle, digraph, vtx_to_in_edges, m):
+def add_hpief_2prime_vars_partial_red(max_cycle, digraph, vtx_to_in_edges, m):
     vars_and_edges = [] # A list of (gurobi_var, position, edge, low_vertex) tuples
     
     # Index i is in the list edge_vars_in[pos][v][low_v] if and only if
@@ -439,8 +430,7 @@ def add_hpief_2prime_edge_vars_partial_red(max_cycle, digraph, vtx_to_in_edges, 
                 if e.dest.id >=low_vtx:
                     for pos in xrange(1, max_cycle-1):
                         if (shortest_path_from_lv[e.src.id] <= pos and
-                                    shortest_path_to_lv[e.dest.id] < max_cycle - pos and
-                                    (pos > 1 or e.dest.id > low_vtx)):
+                                    shortest_path_to_lv[e.dest.id] < max_cycle - pos):
                             new_var = m.addVar(vtype=GRB.BINARY)
                             vars_and_edges.append((new_var, pos, e, low_vtx))
                             idx = len(vars_and_edges) - 1 # Index of tuple just added
@@ -449,7 +439,7 @@ def add_hpief_2prime_edge_vars_partial_red(max_cycle, digraph, vtx_to_in_edges, 
     m.update()
     return vars_and_edges, edge_vars_in, edge_vars_out
 
-def add_hpief_2prime_edge_vars_full_red(max_cycle, digraph, vtx_to_in_edges, m):
+def add_hpief_2prime_vars_full_red(max_cycle, digraph, vtx_to_in_edges, m):
     vars_and_edges = [] # A list of (gurobi_var, position, edge, low_vertex) tuples
     
     # Index i is in the list edge_vars_in[pos][v][low_v] if and only if
@@ -464,11 +454,10 @@ def add_hpief_2prime_edge_vars_full_red(max_cycle, digraph, vtx_to_in_edges, m):
 
     edges_seen = set()  # (low_v_id, src_v_id, dest_v_id, pos) tuples
     for cycle in digraph.generate_cycles(max_cycle):
-        if len(cycle) > 2:
-            for i in range(1, len(cycle)-1):
-                edges_seen.add((cycle[0].id, cycle[i].id, cycle[i+1].id, i))
-            if len(cycle) < max_cycle:
-                edges_seen.add((cycle[0].id, cycle[-1].id, cycle[0].id, len(cycle)-1))
+        for i in range(1, len(cycle)-1):
+            edges_seen.add((cycle[0].id, cycle[i].id, cycle[i+1].id, i))
+        if len(cycle) < max_cycle:
+            edges_seen.add((cycle[0].id, cycle[-1].id, cycle[0].id, len(cycle)-1))
             
     for low_v, src_v, dest_v, pos in edges_seen:
         new_var = m.addVar(vtype=GRB.BINARY)
@@ -483,19 +472,11 @@ def add_hpief_2prime_edge_vars_full_red(max_cycle, digraph, vtx_to_in_edges, m):
     return vars_and_edges, edge_vars_in, edge_vars_out
 
 def add_hpief_2prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m, full_red):
-    two_cycles_and_vars = []
-    if max_cycle >= 2:
-        for c in find_2_cycles(digraph):
-            grb_var = m.addVar(vtype=GRB.BINARY)
-            vtx_to_in_edges[c[0].id].append(grb_var)
-            vtx_to_in_edges[c[1].id].append(grb_var)
-            two_cycles_and_vars.append((c, grb_var))
-
     if full_red:
-        vars_and_edges, edge_vars_in, edge_vars_out = add_hpief_2prime_edge_vars_full_red(
+        vars_and_edges, edge_vars_in, edge_vars_out = add_hpief_2prime_vars_full_red(
                 max_cycle, digraph, vtx_to_in_edges, m)
     else:
-        vars_and_edges, edge_vars_in, edge_vars_out = add_hpief_2prime_edge_vars_partial_red(
+        vars_and_edges, edge_vars_in, edge_vars_out = add_hpief_2prime_vars_partial_red(
                 max_cycle, digraph, vtx_to_in_edges, m)
 
     for grb_var, pos, edge, low_vtx in vars_and_edges:
@@ -519,7 +500,7 @@ def add_hpief_2prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m
                 if len(in_vars) > 0 or len(out_vars) > 0:
                     m.addConstr(quicksum(in_vars) == quicksum(out_vars))
 
-    return vars_and_edges, two_cycles_and_vars
+    return vars_and_edges
 
 def optimise_hpief_2prime(digraph, ndds, max_cycle, max_chain, timelimit, full_red=False):
     """Optimise using the HPIEF'' formulation.
@@ -535,8 +516,9 @@ def optimise_hpief_2prime(digraph, ndds, max_cycle, max_chain, timelimit, full_r
         an OptSolution object
     """
 
-    # This IP model is based on HPIEF, but does not include cycle-edges at position zero.
-    
+    if max_cycle < 3:
+        return optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit, full_red)
+
     m = create_ip_model(timelimit)
     m.params.method = 2
     m.params.presolve = 0
@@ -546,7 +528,7 @@ def optimise_hpief_2prime(digraph, ndds, max_cycle, max_chain, timelimit, full_r
 
     add_chain_vars_and_constraints(digraph, ndds, max_chain, m, vtx_to_in_edges)
 
-    vars_and_edges, two_cycles_and_vars = add_hpief_2prime_vars_and_constraints(
+    vars_and_edges = add_hpief_2prime_vars_and_constraints(
             max_cycle, digraph, vtx_to_in_edges, m, full_red)
 
     obj_terms = []
@@ -557,9 +539,6 @@ def optimise_hpief_2prime(digraph, ndds, max_cycle, max_chain, timelimit, full_r
         if pos==max_cycle - 2 and edge.dest.id != low_v_id:
             score += digraph.adj_mat[edge.dest.id][low_v_id].score
         obj_terms.append(score * var)
-
-    for c, var in two_cycles_and_vars:
-        obj_terms.append(cycle_score(c, digraph) * var)
 
     obj_expr = quicksum(obj_terms)
    
@@ -582,12 +561,8 @@ def optimise_hpief_2prime(digraph, ndds, max_cycle, max_chain, timelimit, full_r
             if pos == max_cycle - 2 and edge.dest.id != low_v_id:
                 cycle_next_vv[edge.dest.id] = low_v_id
     
-    selected_cycles = (
-            kidney_utils.selected_edges_to_cycles(digraph, cycle_start_vv, cycle_next_vv) +
-            [c for c, var in two_cycles_and_vars if var.x > 0.1])
-
     return OptSolution(ip_model=m,
-                       cycles=selected_cycles,
+                       cycles=kidney_utils.selected_edges_to_cycles(digraph, cycle_start_vv, cycle_next_vv),
                        chains=[] if max_chain==0 else kidney_utils.get_optimal_chains(digraph, ndds),
                        digraph=digraph)
 
