@@ -18,7 +18,8 @@ The program `utils/convert.py` can be used to convert from `.wmd` format.
 The `kidney_solver` program has three required command-line arguments: cycle cap, chain cap, and formulation. Note that the chain cap is the maximum permitted number of edges in a chain, _excluding the dummy arc to the NDD_. The formulation can be:
 
 - uef: Edge formulation with unrestricted cycle and chain sizes
-- hpief\_prime: A slightly-modified hybrid PIEF
+- hpief\_prime: A hybrid PIEF with an additional refinement that avoids the need for variables in first position
+- hpief\_2prime: hpief\_prime, with an additional refinement that avoids the need for variables in position equal to the cycle cap
 - picef: Position-indexed chain-edge formulation
 - cf: Cycle formulation, with one variable per cycle or chain
 
