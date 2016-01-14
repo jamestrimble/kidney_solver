@@ -6,6 +6,12 @@ import kidney_utils
 
 from gurobipy import *
 
+###################################################################################################
+#                                                                                                 #
+#                                  Code used by all formulations                                  #
+#                                                                                                 #
+###################################################################################################
+
 class OptSolution(object):
     """An optimal solution for a kidney-exchange problem instance.
     
@@ -62,6 +68,33 @@ class OptSolution(object):
                              for c in self.chains]
         return OptSolution(self.ip_model, relabelled_cycles, relabelled_chains, new_digraph)
 
+def optimise_relabelled(formulation_fun, digraph, ndds, max_cycle, max_chain, timelimit):
+    """Optimise on a relabelled graph such that vertices are sorted in descending
+        order of (indegree + outdegree)"""
+
+    in_degs = [0] * len(digraph.vs)
+    for e in digraph.es:
+        in_degs[e.dest.id] += 1
+
+    sorted_vertices = sorted(digraph.vs,
+                             key=lambda v: len(v.edges) + in_degs[v.id],
+                             reverse=True)
+    
+    relabelled_digraph = digraph.induced_subgraph(sorted_vertices)
+
+    # old_to_new_vtx[i] is the vertex in the new graph corresponding to vertex
+    # i in the original digraph
+    old_to_new_vtx = [None] * len(digraph.vs)
+    for i, v in enumerate(sorted_vertices):
+        old_to_new_vtx[v.id] = relabelled_digraph.vs[i]
+
+    relabelled_ndds = create_relabelled_ndds(ndds, old_to_new_vtx)
+
+    opt_result = formulation_fun(relabelled_digraph, relabelled_ndds,
+                                 max_cycle, max_chain, timelimit)
+
+    return opt_result.relabelled_copy(sorted_vertices, digraph)
+
 def create_ip_model(time_limit):
     """Create a Gurobi Model."""
 
@@ -72,54 +105,11 @@ def create_ip_model(time_limit):
         m.params.timelimit = time_limit
     return m
 
-def add_chain_vars_and_constraints(digraph, ndds, max_chain, m, vtx_to_vars):
-    """Add the IP variables and constraints for chains in PICEF and HPIEF'.
-
-    Args:
-        ndds: a list of NDDs in the instance
-        max_chain: the chain cap
-        m: The Gurobi model
-        vtx_to_vars: A list such that for each Vertex v in the Digraph,
-            vtx_to_vars[v.id] will contain the Gurobi variables representing
-            edges pointing to v.
-    """
-
-    if max_chain > 0:
-        for v in digraph.vs:
-            v.grb_vars_in  = [[] for i in range(max_chain-1)]
-            v.grb_vars_out = [[] for i in range(max_chain-1)]
-
-        for ndd in ndds:
-            ndd_edge_vars = []
-            for e in ndd.edges:
-                edge_var = m.addVar(vtype=GRB.BINARY)
-                e.edge_var = edge_var
-                ndd_edge_vars.append(edge_var)
-                vtx_to_vars[e.target_v.id].append(edge_var)
-                if max_chain>1: e.target_v.grb_vars_in[0].append(edge_var)
-            m.update()
-            m.addConstr(quicksum(ndd_edge_vars) <= 1)
-
-        dists_from_ndd = kidney_utils.get_dist_from_nearest_ndd(digraph, ndds)
-
-        # Add pair->pair edge variables, indexed by position in chain
-        for e in digraph.es:
-            e.grb_vars = []
-            for i in range(max_chain-1):
-                if dists_from_ndd[e.src.id] <= i+1:
-                    edge_var = m.addVar(vtype=GRB.BINARY)
-                    e.grb_vars.append(edge_var)
-                    vtx_to_vars[e.dest.id].append(edge_var)
-                    e.src.grb_vars_out[i].append(edge_var)
-                    if i < max_chain-2:
-                        e.dest.grb_vars_in[i+1].append(edge_var)
-
-        m.update()
-
-        # At each chain position, sum of edges into a vertex must be >= sum of edges out
-        for i in range(max_chain-1):
-            for v in digraph.vs:
-                m.addConstr(quicksum(v.grb_vars_in[i]) >= quicksum(v.grb_vars_out[i]))
+###################################################################################################
+#                                                                                                 #
+#                                       Uncapped formulation                                      #
+#                                                                                                 #
+###################################################################################################
 
 def add_unlimited_vars_and_constraints(digraph, ndds, m):
     """Add the IP variables and constraints for chains in the uncapped edge formulation. 
@@ -199,6 +189,66 @@ def optimise_uuef(digraph, ndds, max_cycle, max_chain, timelimit):
                        chains=kidney_utils.get_optimal_chains(digraph, ndds),
                        digraph=digraph)
         
+###################################################################################################
+#                                                                                                 #
+#                  Chain vars and constraints (used by HPIEF', HPIEF'' and PICEF)                 #
+#                                                                                                 #
+###################################################################################################
+
+def add_chain_vars_and_constraints(digraph, ndds, max_chain, m, vtx_to_vars):
+    """Add the IP variables and constraints for chains in PICEF and HPIEF'.
+
+    Args:
+        ndds: a list of NDDs in the instance
+        max_chain: the chain cap
+        m: The Gurobi model
+        vtx_to_vars: A list such that for each Vertex v in the Digraph,
+            vtx_to_vars[v.id] will contain the Gurobi variables representing
+            edges pointing to v.
+    """
+
+    if max_chain > 0:
+        for v in digraph.vs:
+            v.grb_vars_in  = [[] for i in range(max_chain-1)]
+            v.grb_vars_out = [[] for i in range(max_chain-1)]
+
+        for ndd in ndds:
+            ndd_edge_vars = []
+            for e in ndd.edges:
+                edge_var = m.addVar(vtype=GRB.BINARY)
+                e.edge_var = edge_var
+                ndd_edge_vars.append(edge_var)
+                vtx_to_vars[e.target_v.id].append(edge_var)
+                if max_chain>1: e.target_v.grb_vars_in[0].append(edge_var)
+            m.update()
+            m.addConstr(quicksum(ndd_edge_vars) <= 1)
+
+        dists_from_ndd = kidney_utils.get_dist_from_nearest_ndd(digraph, ndds)
+
+        # Add pair->pair edge variables, indexed by position in chain
+        for e in digraph.es:
+            e.grb_vars = []
+            for i in range(max_chain-1):
+                if dists_from_ndd[e.src.id] <= i+1:
+                    edge_var = m.addVar(vtype=GRB.BINARY)
+                    e.grb_vars.append(edge_var)
+                    vtx_to_vars[e.dest.id].append(edge_var)
+                    e.src.grb_vars_out[i].append(edge_var)
+                    if i < max_chain-2:
+                        e.dest.grb_vars_in[i+1].append(edge_var)
+
+        m.update()
+
+        # At each chain position, sum of edges into a vertex must be >= sum of edges out
+        for i in range(max_chain-1):
+            for v in digraph.vs:
+                m.addConstr(quicksum(v.grb_vars_in[i]) >= quicksum(v.grb_vars_out[i]))
+
+###################################################################################################
+#                                                                                                 #
+#                                               HPIEF'                                            #
+#                                                                                                 #
+###################################################################################################
 
 def add_hpief_prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m):
     n = len(digraph.vs)
@@ -312,6 +362,160 @@ def optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit):
                        chains=[] if max_chain==0 else kidney_utils.get_optimal_chains(digraph, ndds),
                        digraph=digraph)
 
+###################################################################################################
+#                                                                                                 #
+#                                             HPIEF''                                             #
+#                                                                                                 #
+###################################################################################################
+
+def find_2_cycles(digraph):
+    """Return a list of 2-cycles in a digraph"""
+    two_cycles = []
+    for v in digraph.vs:
+        for e in v.edges:
+            if e.dest.id > v.id and digraph.edge_exists(e.dest, v):
+                two_cycles.append([v, e.dest])
+    return two_cycles
+
+def add_hpief_2prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m):
+    n = len(digraph.vs)
+
+    two_cycles_and_vars = []
+    if max_cycle >= 2:
+        for c in find_2_cycles(digraph):
+            grb_var = m.addVar(vtype=GRB.BINARY)
+            vtx_to_in_edges[c[0].id].append(grb_var)
+            vtx_to_in_edges[c[1].id].append(grb_var)
+            two_cycles_and_vars.append((c, grb_var))
+
+    vars_and_edges = [] # A list of (gurobi_var, position, edge, low_vertex) tuples
+    
+    # Index i is in the list edge_vars_in[pos][v][low_v] if and only if
+    # vars_and_edges[i] corresponds to an edge at position pos, pointing to vertex
+    # v, in low_v's graph copy 
+    edge_vars_in = [[[[] for __ in range(n)] for __ in range(n)] for __ in range(max_cycle-1)]
+
+    # Index i is in the list edge_vars_out[pos][v][low_v] if and only if
+    # vars_and_edges[i] corresponds to an edge at position pos, leaving vertex
+    # v, in low_v's graph copy 
+    edge_vars_out = [[[[] for __ in range(n)] for __ in range(n)] for __ in range(max_cycle-1)]
+
+    for low_vtx in range(len(digraph.vs)-2):
+        # Length of shortest path from low vertex to each vertex with a higher index
+        # Default value is 999999999 (which represents infinity)
+        shortest_path_from_lv = digraph.get_shortest_path_from_low_vtx(low_vtx, max_cycle-1) 
+        shortest_path_to_lv = digraph.get_shortest_path_to_low_vtx(low_vtx, max_cycle-1) 
+
+        for v1 in digraph.vs[low_vtx+1:]:
+            for e in v1.edges:
+                if e.dest.id >=low_vtx:
+                    for pos in xrange(1, max_cycle-1):
+                        if (shortest_path_from_lv[e.src.id] <= pos and
+                                    shortest_path_to_lv[e.dest.id] < max_cycle - pos):
+                            new_var = m.addVar(vtype=GRB.BINARY)
+                            vars_and_edges.append((new_var, pos, e, low_vtx))
+                            idx = len(vars_and_edges) - 1 # Index of tuple just added
+                            edge_vars_in[pos][e.dest.id][low_vtx].append(idx)
+                            edge_vars_out[pos][e.src.id][low_vtx].append(idx)
+    m.update()
+    
+    for grb_var, pos, edge, low_vtx in vars_and_edges:
+        vtx_to_in_edges[edge.dest.id].append(grb_var)
+        if pos == 1:
+            vtx_to_in_edges[edge.src.id].append(grb_var)
+        if pos == max_cycle - 2 and edge.dest.id != low_vtx:
+            vtx_to_in_edges[low_vtx].append(grb_var)
+        
+    # Capacity constraint for vertices
+    for l in vtx_to_in_edges:
+        if len(l) > 0:
+            m.addConstr(quicksum(l) <= 1)
+    
+    # Cycle flow-conservation constraint for vertices
+    for pos in range(1, max_cycle-2):
+        for v in range(n):
+            for low_v_id in range(v):
+                in_vars  = [vars_and_edges[i][0] for i in edge_vars_in[pos][v][low_v_id]]
+                out_vars = [vars_and_edges[i][0] for i in edge_vars_out[pos+1][v][low_v_id]]
+                if len(in_vars) > 0 or len(out_vars) > 0:
+                    m.addConstr(quicksum(in_vars) == quicksum(out_vars))
+
+    return vars_and_edges, two_cycles_and_vars
+
+def optimise_hpief_2prime(digraph, ndds, max_cycle, max_chain, timelimit):
+    """Optimise using the HPIEF'' formulation.
+
+    Args:
+        ndds: NDDs in the instance
+        max_cycle: the cycle cap
+        max_chain: the chain cap
+        timelimit: the Gurobi timeout in seconds, or None for no timeout
+
+    Returns:
+        an OptSolution object
+    """
+
+    # This IP model is based on HPIEF, but does not include cycle-edges at position zero.
+    
+    m = create_ip_model(timelimit)
+    m.params.method = 2
+    m.params.presolve = 0
+
+    # For each vertex v, a list of variables corresponding to in-edges to v
+    vtx_to_in_edges = [[] for __ in digraph.vs]
+
+    add_chain_vars_and_constraints(digraph, ndds, max_chain, m, vtx_to_in_edges)
+
+    vars_and_edges, two_cycles_and_vars = add_hpief_2prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m)
+
+    obj_terms = []
+    for var, pos, edge, low_v_id in vars_and_edges:
+        score = edge.score
+        if pos==1:
+            score += digraph.adj_mat[low_v_id][edge.src.id].score
+        if pos==max_cycle - 2 and edge.dest.id != low_v_id:
+            score += digraph.adj_mat[edge.dest.id][low_v_id].score
+        obj_terms.append(score * var)
+
+    for c, var in two_cycles_and_vars:
+        obj_terms.append(cycle_score(c, digraph) * var)
+
+    obj_expr = quicksum(obj_terms)
+   
+    if max_chain > 0:
+        obj_expr += quicksum(e.score * e.edge_var for ndd in ndds for e in ndd.edges) 
+        obj_expr += quicksum(e.score * var for e in digraph.es for var in e.grb_vars)
+    
+    m.setObjective(obj_expr, GRB.MAXIMIZE)
+    m.optimize()
+
+    cycle_start_vv = []
+    cycle_next_vv = {}
+    
+    for (var, pos, edge, low_v_id) in vars_and_edges:
+        if var.x > 0.1:
+            cycle_next_vv[edge.src.id] = edge.dest.id
+            if pos == 1:
+                cycle_start_vv.append(low_v_id)
+                cycle_next_vv[low_v_id] = edge.src.id
+            if pos == max_cycle - 2 and edge.dest.id != low_v_id:
+                cycle_next_vv[edge.dest.id] = low_v_id
+    
+    selected_cycles = (
+            kidney_utils.selected_edges_to_cycles(digraph, cycle_start_vv, cycle_next_vv) +
+            [c for c, var in two_cycles_and_vars if var.x > 0.1])
+
+    return OptSolution(ip_model=m,
+                       cycles=selected_cycles,
+                       chains=[] if max_chain==0 else kidney_utils.get_optimal_chains(digraph, ndds),
+                       digraph=digraph)
+
+###################################################################################################
+#                                                                                                 #
+#                                              PICEF                                              #
+#                                                                                                 #
+###################################################################################################
+
 def optimise_picef(digraph, ndds, max_cycle, max_chain, timelimit):
     """Optimise using the PICEF formulation.
 
@@ -412,29 +616,3 @@ def optimise_ccf(digraph, ndds, max_cycle, max_chain, timelimit):
                        chains=[c for c, v in zip(chains, chain_vars) if v.x > 0.5],
                        digraph=digraph)
 
-def optimise_relabelled(formulation_fun, digraph, ndds, max_cycle, max_chain, timelimit):
-    """Optimise on a relabelled graph such that vertices are sorted in descending
-        order of (indegree + outdegree)"""
-
-    in_degs = [0] * len(digraph.vs)
-    for e in digraph.es:
-        in_degs[e.dest.id] += 1
-
-    sorted_vertices = sorted(digraph.vs,
-                             key=lambda v: len(v.edges) + in_degs[v.id],
-                             reverse=True)
-    
-    relabelled_digraph = digraph.induced_subgraph(sorted_vertices)
-
-    # old_to_new_vtx[i] is the vertex in the new graph corresponding to vertex
-    # i in the original digraph
-    old_to_new_vtx = [None] * len(digraph.vs)
-    for i, v in enumerate(sorted_vertices):
-        old_to_new_vtx[v.id] = relabelled_digraph.vs[i]
-
-    relabelled_ndds = create_relabelled_ndds(ndds, old_to_new_vtx)
-
-    opt_result = formulation_fun(relabelled_digraph, relabelled_ndds,
-                                 max_cycle, max_chain, timelimit)
-
-    return opt_result.relabelled_copy(sorted_vertices, digraph)

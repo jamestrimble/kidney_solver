@@ -16,6 +16,7 @@ def solve_kep(digraph, ndds, max_cycle, max_chain, formulation, timelimit, use_r
     formulations = {
         "uef":  ("Uncapped edge formulation", kidney_ip.optimise_uuef),
         "hpief_prime": ("HPIEF'", kidney_ip.optimise_hpief_prime),
+        "hpief_2prime": ("HPIEF''", kidney_ip.optimise_hpief_2prime),
         "picef": ("PICEF", kidney_ip.optimise_picef),
         "cf":   ("Cycle formulation",
                   kidney_ip.optimise_ccf)
@@ -41,7 +42,7 @@ def start():
     parser.add_argument("chain_cap", type=int,
             help="The maximum permitted number of edges in a chain")
     parser.add_argument("formulation",
-            help="The IP formulation (uef, hpief_prime, picef, cf)")
+            help="The IP formulation (uef, hpief_prime, hpief_2prime, picef, cf)")
     parser.add_argument("--use-relabelled", "-r", required=False,
             action="store_true",
             help="Relabel vertices in descending order of in-deg + out-deg")
