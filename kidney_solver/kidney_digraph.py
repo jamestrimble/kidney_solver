@@ -79,14 +79,22 @@ class Digraph:
             a list of cycles. Each cycle is represented as a list of
             vertices, with the first vertex _not_ repeated at the end.
         """
+        
+        return [cycle for cycle in self.generate_cycles(max_length)]
 
-        cycles = []
+    def generate_cycles(self, max_length):
+        """Generate cycles of length up to max_length in the digraph.
+
+        Each cycle yielded by this generator is represented as a list of
+        vertices, with the first vertex _not_ repeated at the end.
+        """
+
         vtx_used = [False] * len(self.vs)  # vtx_used[i]==True iff vertex i is in current path
 
         def cycle(current_path):
             last_vtx = current_path[-1]
             if self.edge_exists(last_vtx, current_path[0]):
-                cycles.append(current_path[:])
+                yield current_path[:]
             if len(current_path) < max_length:
                 for e in last_vtx.edges: 
                     v = e.dest
@@ -94,7 +102,8 @@ class Digraph:
                                 and not vtx_used[v.id]):
                         current_path.append(v)
                         vtx_used[v.id] = True
-                        cycle(current_path)
+                        for c in cycle(current_path):
+                            yield c
                         vtx_used[v.id] = False
                         del current_path[-1]
 
@@ -108,9 +117,9 @@ class Digraph:
                     v, max_length - 1,
                     lambda u: (w for w in transp_adj_lists[u.id] if w.id > v.id))
             vtx_used[v.id] = True
-            cycle([v])
+            for c in cycle([v]):
+                yield c
             vtx_used[v.id] = False
-        return cycles
     
     def get_shortest_path_from_low_vtx(self, low_vtx, max_path):
         """ Returns an array of path lengths. For each v > low_vtx, if the shortest
