@@ -6,6 +6,7 @@ kidney\_solver is a program for the _kidney-exchange problem_, using Python 2 an
 
 - Python 2
 - [Gurobi](http://www.gurobi.com)
+- Nose, for the tests. Run ``nosetests`` from the base directory.
 
 ## Usage
 
