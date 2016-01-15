@@ -293,14 +293,7 @@ def add_hpief_prime_vars_partial_red(max_cycle, digraph, m):
 def add_hpief_prime_vars_full_red(max_cycle, digraph, m):
     vars_and_edges = [] # A list of (gurobi_var, position, edge, low_vertex) tuples
     
-    # Index i is in the list edge_vars_in[pos][v][low_v] if and only if
-    # vars_and_edges[i] corresponds to an edge at position pos, pointing to vertex
-    # v, in low_v's graph copy 
     edge_vars_in = [[[[] for __ in range(digraph.n)] for __ in range(digraph.n)] for __ in range(max_cycle)]
-
-    # Index i is in the list edge_vars_out[pos][v][low_v] if and only if
-    # vars_and_edges[i] corresponds to an edge at position pos, leaving vertex
-    # v, in low_v's graph copy 
     edge_vars_out = [[[[] for __ in range(digraph.n)] for __ in range(digraph.n)] for __ in range(max_cycle)]
 
     edges_seen = set()  # (low_v_id, src_v_id, tgt_v_id, pos) tuples
@@ -416,7 +409,7 @@ def optimise_hpief_prime_full_red(digraph, ndds, max_cycle, max_chain, timelimit
 #                                                                                                 #
 ###################################################################################################
 
-def add_hpief_2prime_vars_partial_red(max_cycle, digraph, vtx_to_in_edges, m):
+def add_hpief_2prime_vars_partial_red(max_cycle, digraph, m):
     vars_and_edges = [] # A list of (gurobi_var, position, edge, low_vertex) tuples
     
     # Index i is in the list edge_vars_in[pos][v][low_v] if and only if
@@ -449,17 +442,10 @@ def add_hpief_2prime_vars_partial_red(max_cycle, digraph, vtx_to_in_edges, m):
     m.update()
     return vars_and_edges, edge_vars_in, edge_vars_out
 
-def add_hpief_2prime_vars_full_red(max_cycle, digraph, vtx_to_in_edges, m):
+def add_hpief_2prime_vars_full_red(max_cycle, digraph, m):
     vars_and_edges = [] # A list of (gurobi_var, position, edge, low_vertex) tuples
     
-    # Index i is in the list edge_vars_in[pos][v][low_v] if and only if
-    # vars_and_edges[i] corresponds to an edge at position pos, pointing to vertex
-    # v, in low_v's graph copy 
     edge_vars_in = [[[[] for __ in range(digraph.n)] for __ in range(digraph.n)] for __ in range(max_cycle-1)]
-
-    # Index i is in the list edge_vars_out[pos][v][low_v] if and only if
-    # vars_and_edges[i] corresponds to an edge at position pos, leaving vertex
-    # v, in low_v's graph copy 
     edge_vars_out = [[[[] for __ in range(digraph.n)] for __ in range(digraph.n)] for __ in range(max_cycle-1)]
 
     edges_seen = set()  # (low_v_id, src_v_id, tgt_v_id, pos) tuples
@@ -484,10 +470,10 @@ def add_hpief_2prime_vars_full_red(max_cycle, digraph, vtx_to_in_edges, m):
 def add_hpief_2prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m, full_red):
     if full_red:
         vars_and_edges, edge_vars_in, edge_vars_out = add_hpief_2prime_vars_full_red(
-                max_cycle, digraph, vtx_to_in_edges, m)
+                max_cycle, digraph, m)
     else:
         vars_and_edges, edge_vars_in, edge_vars_out = add_hpief_2prime_vars_partial_red(
-                max_cycle, digraph, vtx_to_in_edges, m)
+                max_cycle, digraph, m)
 
     for grb_var, pos, edge, low_vtx in vars_and_edges:
         vtx_to_in_edges[edge.tgt.id].append(grb_var)
@@ -530,7 +516,7 @@ def optimise_hpief_2prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_s
         raise ValueError("This formulation does not support failure-aware matching.")
 
     if max_cycle < 3:
-        return optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit, full_red)
+        return optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob, full_red)
 
     m = create_ip_model(timelimit)
     m.params.method = 2
