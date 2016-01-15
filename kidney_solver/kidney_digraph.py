@@ -32,14 +32,14 @@ class Vertex:
 class Edge:
     """An edge in a directed graph (see the Digraph class)."""
 
-    def __init__(self, id, score, src, dest):
+    def __init__(self, id, score, src, tgt):
         self.id = id
         self.score = score
         self.src = src   # source vertex
-        self.dest = dest # destination vertex
+        self.tgt = tgt # target vertex
 
     def __str__(self):
-        return ("V" + str(self.src.id) + "-V" + str(self.dest.id))
+        return ("V" + str(self.src.id) + "-V" + str(self.tgt.id))
 
 class Digraph:
     """A directed graph, in which each edge has a numeric score.
@@ -57,20 +57,20 @@ class Digraph:
         self.adj_mat = [[None for x in range(n)] for x in range(n)]
         self.es = []
 
-    def add_edge(self, score, source, dest):
+    def add_edge(self, score, source, tgt):
         """Add an edge to the digraph
 
         Args:
             score: the edge's score, as a float
             source: the source Vertex
-            dest: the edge's target Vertex
+            tgt: the edge's target Vertex
         """
 
         id = len(self.es)
-        e = Edge(id, score, source, dest)
+        e = Edge(id, score, source, tgt)
         self.es.append(e)
         source.edges.append(e)
-        self.adj_mat[source.id][dest.id] = e
+        self.adj_mat[source.id][tgt.id] = e
     
     def find_cycles(self, max_length):
         """Find cycles of length up to max_length in the digraph.
@@ -97,7 +97,7 @@ class Digraph:
                 yield current_path[:]
             if len(current_path) < max_length:
                 for e in last_vtx.edges: 
-                    v = e.dest
+                    v = e.tgt
                     if (len(current_path) + shortest_paths_to_low_vtx[v.id] <= max_length
                                 and not vtx_used[v.id]):
                         current_path.append(v)
@@ -110,7 +110,7 @@ class Digraph:
         # Adjacency lists for transpose graph
         transp_adj_lists = [[] for v in self.vs]
         for edge in self.es:
-            transp_adj_lists[edge.dest.id].append(edge.src)
+            transp_adj_lists[edge.tgt.id].append(edge.src)
 
         for v in self.vs:
             shortest_paths_to_low_vtx = self.calculate_shortest_path_lengths(
@@ -127,7 +127,7 @@ class Digraph:
             will be the length of this shortest path. Otherwise, element v will be
             999999999."""
         return self.calculate_shortest_path_lengths(self.vs[low_vtx], max_path,
-                    adj_list_accessor=lambda v: (e.dest for e in v.edges if e.dest.id >= low_vtx))
+                    adj_list_accessor=lambda v: (e.tgt for e in v.edges if e.tgt.id >= low_vtx))
 
     def get_shortest_path_to_low_vtx(self, low_vtx, max_path):
         """ Returns an array of path lengths. For each v > low_vtx, if the shortest
@@ -143,7 +143,7 @@ class Digraph:
                     adj_list_accessor=adj_list_accessor)
 
     def calculate_shortest_path_lengths(self, from_v, max_dist,
-                adj_list_accessor=lambda v: (e.dest for e in v.edges)):
+                adj_list_accessor=lambda v: (e.tgt for e in v.edges)):
         """Calculate the length of the shortest path from vertex from_v to each
         vertex with a greater or equal index, using paths containing
         only vertices indexed greater than or equal to from_v.
@@ -189,8 +189,8 @@ class Digraph:
                 e = self.adj_mat[v.id][w.id]
                 if e is not None:
                     new_src = subgraph.vs[i]
-                    new_dest = subgraph.vs[j]
-                    subgraph.add_edge(e.score, new_src, new_dest)
+                    new_tgt = subgraph.vs[j]
+                    subgraph.add_edge(e.score, new_src, new_tgt)
         return subgraph
 
     def __str__(self):
@@ -204,18 +204,18 @@ def read_digraph(lines):
     for line in lines[1:edge_count+1]:
         tokens = [x for x in line.split()]
         src_id = int(tokens[0])
-        dest_id = int(tokens[1])
+        tgt_id = int(tokens[1])
         if src_id < 0 or src_id >= vtx_count:
             raise KidneyReadException("Vertex index {} out of range.".format(src_id))
-        if dest_id < 0 or dest_id >= vtx_count:
-            raise KidneyReadException("Vertex index {} out of range.".format(dest_id))
-        if src_id == dest_id:
+        if tgt_id < 0 or tgt_id >= vtx_count:
+            raise KidneyReadException("Vertex index {} out of range.".format(tgt_id))
+        if src_id == tgt_id:
             raise KidneyReadException("Self-loop from {0} to {0} not permitted".format(src_id))
-        if digraph.edge_exists(digraph.vs[src_id], digraph.vs[dest_id]):
-            raise KidneyReadException("Duplicate edge from {} to {}".format(src_id, dest_id))
+        if digraph.edge_exists(digraph.vs[src_id], digraph.vs[tgt_id]):
+            raise KidneyReadException("Duplicate edge from {} to {}".format(src_id, tgt_id))
         score = float(tokens[2])
             
-        digraph.add_edge(score, digraph.vs[src_id], digraph.vs[dest_id])
+        digraph.add_edge(score, digraph.vs[src_id], digraph.vs[tgt_id])
 
     if lines[edge_count+1].split()[0] != "-1" or len(lines) < edge_count+2:
         raise KidneyReadException("Incorrect edge count")

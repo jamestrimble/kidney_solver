@@ -28,7 +28,7 @@ def count_cycles(digraph, max_length):
             counts_by_size[num_vertices] += 1
         if num_vertices < max_length:
             for e in last_vtx.edges: 
-                v = e.dest
+                v = e.tgt
                 if (num_vertices + shortest_paths_to_low_vtx[v.id] <= max_length
                             and not vtx_used[v.id]):
                     vtx_used[v.id] = True
@@ -38,7 +38,7 @@ def count_cycles(digraph, max_length):
     # Adjacency lists for transpose graph
     transp_adj_lists = [[] for v in digraph.vs]
     for edge in digraph.es:
-        transp_adj_lists[edge.dest.id].append(edge.src)
+        transp_adj_lists[edge.tgt.id].append(edge.src)
 
     for v in digraph.vs:
         shortest_paths_to_low_vtx = digraph.calculate_shortest_path_lengths(
@@ -55,10 +55,10 @@ def count_chains(digraph, ndds, max_chain):
         counts_by_size[length] += 1
         if length < max_chain:
             for e in digraph.vs[last_vtx].edges:
-                if not vtx_used[e.dest.id]:
-                    vtx_used[e.dest.id] = True
-                    find_chains_recurse(e.dest.id, length+1)
-                    vtx_used[e.dest.id] = False
+                if not vtx_used[e.tgt.id]:
+                    vtx_used[e.tgt.id] = True
+                    find_chains_recurse(e.tgt.id, length+1)
+                    vtx_used[e.tgt.id] = False
     counts_by_size = [0] * (max_chain + 1)
 
     if max_chain == 0:

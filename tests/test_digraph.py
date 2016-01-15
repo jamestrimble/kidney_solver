@@ -27,13 +27,13 @@ def test_shortest_path():
 
     min_vtx = 1
     spl = d.calculate_shortest_path_lengths(d.vs[min_vtx], 4,
-            lambda v: (e.dest for e in v.edges if e.dest.id > min_vtx))
+            lambda v: (e.tgt for e in v.edges if e.tgt.id > min_vtx))
     assert spl == [999999999, 0, 999999999, 2, 1, 2, 3, 4, 999999999]
     print spl
 
     min_vtx = 7
     spl = d.calculate_shortest_path_lengths(d.vs[min_vtx], 4,
-            lambda v: (e.dest for e in v.edges if e.dest.id > min_vtx))
+            lambda v: (e.tgt for e in v.edges if e.tgt.id > min_vtx))
     print spl
     assert spl == [999999999, 999999999, 999999999, 999999999, 999999999, 999999999, 999999999, 0, 1]
 

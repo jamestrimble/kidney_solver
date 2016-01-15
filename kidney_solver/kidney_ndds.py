@@ -51,17 +51,17 @@ def read_ndds(lines, digraph):
     for line in lines[1:edge_count+1]:
         tokens = [t for t in line.split()]
         src_id = int(tokens[0])
-        dest_id = int(tokens[1])
+        tgt_id = int(tokens[1])
         score = float(tokens[2])
         if src_id < 0 or src_id >= ndd_count:
             raise KidneyReadException("NDD index {} out of range.".format(src_id))
-        if dest_id < 0 or dest_id >= digraph.n:
-            raise KidneyReadException("Vertex index {} out of range.".format(dest_id))
-        if edge_exists[src_id][dest_id]:
+        if tgt_id < 0 or tgt_id >= digraph.n:
+            raise KidneyReadException("Vertex index {} out of range.".format(tgt_id))
+        if edge_exists[src_id][tgt_id]:
             raise KidneyReadException(
-                    "Duplicate edge from NDD {0} to vertex {1}.".format(src_id, dest_id))
-        ndds[src_id].add_edge(NddEdge(digraph.vs[dest_id], score))
-        edge_exists[src_id][dest_id] = True
+                    "Duplicate edge from NDD {0} to vertex {1}.".format(src_id, tgt_id))
+        ndds[src_id].add_edge(NddEdge(digraph.vs[tgt_id], score))
+        edge_exists[src_id][tgt_id] = True
 
     if lines[edge_count+1].split()[0] != "-1" or len(lines) < edge_count+2:
         raise KidneyReadException("Incorrect edge count")
@@ -117,8 +117,8 @@ def find_chains(digraph, ndds, max_chain):
         chains.append(Chain(ndd_idx, vertices[:], score))
         if len(vertices) < max_chain:
             for e in digraph.vs[vertices[-1]].edges:
-                if e.dest.id not in vertices:
-                    vertices.append(e.dest.id)
+                if e.tgt.id not in vertices:
+                    vertices.append(e.tgt.id)
                     find_chains_recurse(vertices, score+e.score)
                     del vertices[-1]
     chains = []

@@ -81,7 +81,7 @@ def get_dist_from_nearest_ndd(digraph, ndds):
     while q:
         v = q.popleft()
         for e in v.edges:
-            w = e.dest
+            w = e.tgt
             if distances[w.id] == 999999999:
                 distances[w.id] = distances[v.id] + 1
                 q.append(w)
@@ -107,7 +107,7 @@ def find_selected_cycle(v_id, next_vv):
         
 def get_optimal_chains(digraph, ndds):
     # Chain edges
-    chain_next_vv = {e.src.id: e.dest.id
+    chain_next_vv = {e.src.id: e.tgt.id
                         for e in digraph.es
                         for var in e.grb_vars
                         if var.x > 0.1}

@@ -13,7 +13,7 @@ def simple_find_cycles(digraph, max_length):
             cycles.append(current_list[:])
         if len(current_list) < max_length:
             for edge in last_vtx.edges:
-                v = edge.dest
+                v = edge.tgt
                 if v.id > low_vtx_id and not vtx_used[v.id]:
                     vtx_used[v.id] = True
                     current_list.append(v)
