@@ -20,7 +20,7 @@ def test_chains_only_instance():
             k_ip.optimise_picef, k_ip.optimise_ccf]
     for max_chain in [0, 1, 2]:
         for fn in fns:
-            opt_result = fn(d, ndds, 3, max_chain, None)
+            opt_result = fn(k_ip.OptConfig(d, ndds, 3, max_chain, None))
             assert len(opt_result.cycles) == 0
             if fn == k_ip.optimise_uuef or max_chain > 0:
                 assert len(opt_result.chains) == 2
@@ -34,7 +34,7 @@ def test_single_cycle_instance():
             k_ip.optimise_picef, k_ip.optimise_ccf]
     for max_chain in [0, 1, 2]:
         for fn in fns:
-            opt_result = fn(d, ndds, 3, max_chain, None)
+            opt_result = fn(k_ip.OptConfig(d, ndds, 3, max_chain))
             assert len(opt_result.cycles) == 1
             if fn == k_ip.optimise_uuef or max_chain > 0:
                 assert len(opt_result.chains) == 1
@@ -46,26 +46,16 @@ def test_failure_aware():
     d, ndds = read_with_ndds("test-fixtures/3cycle_and_3chain")
     fns = [k_ip.optimise_picef, k_ip.optimise_ccf]
     for fn in fns:
-        max_cycle=3; max_chain=2
-        opt_result = fn(d, ndds, max_cycle, max_chain, None, edge_success_prob = .5)
-        # 3 edges * .5**3 for the cycle; .5 + .5**2 for the chain
-        assert opt_result.total_score == 3 * .125 + .75
-        k_utils.check_validity(opt_result, d, ndds, max_cycle, max_chain)
-
-        max_cycle=3; max_chain=3
-        opt_result = fn(d, ndds, max_cycle, max_chain, None, edge_success_prob = .5)
-        assert opt_result.total_score == 3 * .125 + .875
-        k_utils.check_validity(opt_result, d, ndds, max_cycle, max_chain)
-
-        max_cycle=0; max_chain=3
-        opt_result = fn(d, ndds, max_cycle, max_chain, None, edge_success_prob = .5)
-        assert opt_result.total_score == .875
-        k_utils.check_validity(opt_result, d, ndds, max_cycle, max_chain)
-
-        max_cycle=3; max_chain=0
-        opt_result = fn(d, ndds, max_cycle, max_chain, None, edge_success_prob = .5)
-        assert opt_result.total_score == 3 * .125
-        k_utils.check_validity(opt_result, d, ndds, max_cycle, max_chain)
+        for max_cycle, max_chain, expected_score in [
+                (3, 2, 3*.125 + .75),
+                (3, 3, 3*.125 + .875),
+                (0, 3, .875),
+                (3, 0, 3*.125)]:
+        
+            opt_result = fn(k_ip.OptConfig(d, ndds, max_cycle, max_chain, edge_success_prob=.5))
+            # 3 edges * .5**3 for the cycle; .5 + .5**2 for the chain
+            assert opt_result.total_score == expected_score
+            k_utils.check_validity(opt_result, d, ndds, max_cycle, max_chain)
 
 def test_weighted_instance():
     """Checks that the capped formulations agree on the optimal
@@ -80,11 +70,30 @@ def test_weighted_instance():
             k_ip.optimise_picef, k_ip.optimise_ccf]
     for max_cycle in [0, 1, 2, 3, 4]:
         for max_chain in [0, 1, 2, 3]:
-            opt_result_0 = fns[0](d, ndds, max_cycle, max_chain, None)
+            opt_result_0 = fns[0](k_ip.OptConfig(d, ndds, max_cycle, max_chain))
             for fn in fns[1:]:
-                opt_result = fn(d, ndds, max_cycle, max_chain, None)
-                print max_cycle, max_chain, opt_result.total_score, opt_result.ip_model.obj_val, opt_result_0.total_score, fn
+                opt_result = fn(k_ip.OptConfig(d, ndds, max_cycle, max_chain))
+                print max_cycle, max_chain, opt_result.total_score, \
+                        opt_result.ip_model.obj_val, opt_result_0.total_score, fn
                 assert abs(opt_result.total_score - opt_result_0.total_score) < EPS
+
+def test_weighted_instance_failure_aware():
+    """Checks that the CF and PICEF formulations agree on the optimal
+    result for an instance with weighted edges, using failure-aware solving.
+    """
+    EPS = 0.000001
+    d, ndds = read_with_ndds("test-fixtures/100-random-weights")
+    fns = [k_ip.optimise_picef, k_ip.optimise_ccf]
+    for max_cycle in [0, 1, 2, 3, 4]:
+        for max_chain in [0, 1, 2, 3]:
+            cfg = k_ip.OptConfig(d, ndds, max_cycle, max_chain, edge_success_prob=0.7) 
+            opt_result_cf = k_ip.optimise_ccf(cfg)
+            opt_result_picef = k_ip.optimise_picef(cfg)
+            opt_result_cf_relabelled = k_ip.optimise_relabelled(k_ip.optimise_ccf, cfg)
+            opt_result_picef_relabelled = k_ip.optimise_relabelled(k_ip.optimise_picef, cfg)
+            assert abs(opt_result_cf.total_score - opt_result_picef.total_score) < EPS
+            assert abs(opt_result_cf.total_score - opt_result_cf_relabelled.total_score) < EPS
+            assert abs(opt_result_cf.total_score - opt_result_picef_relabelled.total_score) < EPS
 
 def test_relabelled_solve():
     """Checks whether the vertex-ordering heuristic affects the
@@ -94,9 +103,9 @@ def test_relabelled_solve():
     d, ndds = read_with_ndds("test-fixtures/100-random-weights")
     for max_cycle in [0, 3]:
         for max_chain in [0, 5]:
-            opt_result_0 = k_ip.optimise_picef(d, ndds, max_cycle, max_chain, None)
+            opt_result_0 = k_ip.optimise_picef(k_ip.OptConfig(d, ndds, max_cycle, max_chain))
             print opt_result_0.total_score
             opt_result = k_ip.optimise_relabelled(
-                    k_ip.optimise_picef, d, ndds, max_cycle, max_chain, None)
+                    k_ip.optimise_picef, k_ip.OptConfig(d, ndds, max_cycle, max_chain))
             print "   ", opt_result.total_score
             assert abs(opt_result.total_score - opt_result_0.total_score) < EPS
