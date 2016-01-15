@@ -554,14 +554,14 @@ def optimise_ccf(cfg):
     ndd_to_vars = [[] for __ in cfg.ndds]
     vtx_to_vars = [[] for __ in cfg.digraph.vs]
     
-    for i, c in enumerate(cycles):
+    for var, c in zip(cycle_vars, cycles):
         for v in c:
-            vtx_to_vars[v.id].append(cycle_vars[i])
+            vtx_to_vars[v.id].append(var)
 
-    for i, c in enumerate(chains):
-        ndd_to_vars[c.ndd_index].append(chain_vars[i])
+    for var, c in zip(chain_vars, chains):
+        ndd_to_vars[c.ndd_index].append(var)
         for v in c.vtx_indices:
-            vtx_to_vars[v].append(chain_vars[i])
+            vtx_to_vars[v].append(var)
 
     # Each donor-patient pair and each each NDD is in at most one chosen cycle or chain
     for l in vtx_to_vars + ndd_to_vars:
