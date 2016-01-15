@@ -319,22 +319,20 @@ def add_hpief_prime_vars_full_red(max_cycle, digraph, m, hpief_2_prime=False):
     m.update()
     return vars_and_edges, edge_vars_in, edge_vars_out
 
-###################################################################################################
-#                                                                                                 #
-#                                               HPIEF'                                            #
-#                                                                                                 #
-###################################################################################################
+def add_hpief_prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m, full_red, hpief_2_prime=False):
+    max_pos = max_cycle-2 if hpief_2_prime else max_cycle-1
 
-def add_hpief_prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m, full_red):
     if full_red:
-        vars_and_edges, edge_vars_in, edge_vars_out = add_hpief_prime_vars_full_red(max_cycle, digraph, m)
+        vars_and_edges, edge_vars_in, edge_vars_out = add_hpief_prime_vars_full_red(max_cycle, digraph, m, hpief_2_prime)
     else:
-        vars_and_edges, edge_vars_in, edge_vars_out = add_hpief_prime_vars_partial_red(max_cycle, digraph, m)
+        vars_and_edges, edge_vars_in, edge_vars_out = add_hpief_prime_vars_partial_red(max_cycle, digraph, m, hpief_2_prime)
     
     for grb_var, pos, edge, low_vtx in vars_and_edges:
         vtx_to_in_edges[edge.tgt.id].append(grb_var)
         if pos==1:
             vtx_to_in_edges[edge.src.id].append(grb_var)
+        if hpief_2_prime and pos == max_cycle - 2 and edge.tgt.id != low_vtx:
+            vtx_to_in_edges[low_vtx].append(grb_var)
         
     # Capacity constraint for vertices
     for l in vtx_to_in_edges:
@@ -342,7 +340,7 @@ def add_hpief_prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m,
             m.addConstr(quicksum(l) <= 1)
     
     # Cycle flow-conservation constraint for vertices
-    for pos in range(1, max_cycle-1):
+    for pos in range(1, max_pos):
         for v in range(digraph.n):
             for low_v_id in range(v):
                 in_vars  = [vars_and_edges[i][0] for i in edge_vars_in[pos][v][low_v_id]]
@@ -351,6 +349,12 @@ def add_hpief_prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m,
                     m.addConstr(quicksum(in_vars) == quicksum(out_vars))
 
     return vars_and_edges
+
+###################################################################################################
+#                                                                                                 #
+#                                               HPIEF'                                            #
+#                                                                                                 #
+###################################################################################################
 
 def optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob=1, full_red=False):
     """Optimise using the HPIEF' formulation.
@@ -422,42 +426,8 @@ def optimise_hpief_prime_full_red(digraph, ndds, max_cycle, max_chain, timelimit
 #                                                                                                 #
 ###################################################################################################
 
-def add_hpief_2prime_vars_partial_red(max_cycle, digraph, m):
-    return add_hpief_prime_vars_partial_red(max_cycle, digraph, m, hpief_2_prime=True)
-    
-def add_hpief_2prime_vars_full_red(max_cycle, digraph, m):
-    return add_hpief_prime_vars_partial_red(max_cycle, digraph, m, hpief_2_prime=True)
-
 def add_hpief_2prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m, full_red):
-    if full_red:
-        vars_and_edges, edge_vars_in, edge_vars_out = add_hpief_2prime_vars_full_red(
-                max_cycle, digraph, m)
-    else:
-        vars_and_edges, edge_vars_in, edge_vars_out = add_hpief_2prime_vars_partial_red(
-                max_cycle, digraph, m)
-
-    for grb_var, pos, edge, low_vtx in vars_and_edges:
-        vtx_to_in_edges[edge.tgt.id].append(grb_var)
-        if pos == 1:
-            vtx_to_in_edges[edge.src.id].append(grb_var)
-        if pos == max_cycle - 2 and edge.tgt.id != low_vtx:
-            vtx_to_in_edges[low_vtx].append(grb_var)
-        
-    # Capacity constraint for vertices
-    for l in vtx_to_in_edges:
-        if len(l) > 0:
-            m.addConstr(quicksum(l) <= 1)
-    
-    # Cycle flow-conservation constraint for vertices
-    for pos in range(1, max_cycle-2):
-        for v in range(digraph.n):
-            for low_v_id in range(v):
-                in_vars  = [vars_and_edges[i][0] for i in edge_vars_in[pos][v][low_v_id]]
-                out_vars = [vars_and_edges[i][0] for i in edge_vars_out[pos+1][v][low_v_id]]
-                if len(in_vars) > 0 or len(out_vars) > 0:
-                    m.addConstr(quicksum(in_vars) == quicksum(out_vars))
-
-    return vars_and_edges
+    return add_hpief_prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m, full_red, hpief_2_prime=True)
 
 def optimise_hpief_2prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob=1, full_red=False):
     """Optimise using the HPIEF'' formulation.
