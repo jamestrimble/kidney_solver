@@ -26,11 +26,11 @@ def solve_kep(digraph, ndds, max_cycle, max_chain, formulation, edge_success_pro
     
     if formulation in formulations:
         formulation_name, formulation_fun = formulations[formulation]
+        cfg = kidney_ip.OptConfig(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob)
         if use_relabelled:
-            opt_result = kidney_ip.optimise_relabelled(formulation_fun,
-                    digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob)
+            opt_result = kidney_ip.optimise_relabelled(formulation_fun, cfg)
         else:
-            opt_result = formulation_fun(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob)
+            opt_result = formulation_fun(cfg)
         kidney_utils.check_validity(opt_result, digraph, ndds, max_cycle, max_chain)
         opt_result.formulation_name = formulation_name
         return opt_result
