@@ -110,7 +110,7 @@ class Chain(object):
                     return 1
         return 0
             
-def find_chains(digraph, ndds, max_chain):
+def find_chains(digraph, ndds, max_chain, edge_success_prob=1):
     """Generate all chains with up to max_chain edges."""
 
     def find_chains_recurse(vertices, score):
@@ -119,7 +119,7 @@ def find_chains(digraph, ndds, max_chain):
             for e in digraph.vs[vertices[-1]].edges:
                 if e.tgt.id not in vertices:
                     vertices.append(e.tgt.id)
-                    find_chains_recurse(vertices, score+e.score)
+                    find_chains_recurse(vertices, score+e.score*edge_success_prob**len(vertices))
                     del vertices[-1]
     chains = []
     if max_chain == 0:
@@ -127,6 +127,6 @@ def find_chains(digraph, ndds, max_chain):
     for ndd_idx, ndd in enumerate(ndds):
         for e in ndd.edges:
             vertices = [e.target_v.id]
-            find_chains_recurse(vertices, e.score)
+            find_chains_recurse(vertices, e.score*edge_success_prob)
     return chains
 

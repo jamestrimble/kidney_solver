@@ -17,7 +17,19 @@ def cycle_score(cycle, digraph):
     """
 
     return sum(digraph.adj_mat[cycle[i-1].id][cycle[i].id].score
-                    for i in range(len(cycle)))
+                        for i in range(len(cycle)))
+
+def failure_aware_cycle_score(cycle, digraph, edge_success_prob):
+    """Calculate a cycle's total score, with edge failures and no backarc recourse.
+
+    Args:
+        cycle: A list of Vertex objects in the cycle, with the first Vertex not repeated.
+        digraph: The digraph in which this cycle appears.
+        edge_success_prob: The problem that any given edge will NOT fail
+    """
+
+    return sum(digraph.adj_mat[cycle[i-1].id][cycle[i].id].score
+                    for i in range(len(cycle))) * edge_success_prob**len(cycle)
 
 class Vertex:
     """A vertex in a directed graph (see the Digraph class)."""

@@ -11,7 +11,7 @@ import kidney_ip
 import kidney_utils
 import kidney_ndds
 
-def solve_kep(digraph, ndds, max_cycle, max_chain, formulation, timelimit, use_relabelled=True):
+def solve_kep(digraph, ndds, max_cycle, max_chain, formulation, edge_success_prob, timelimit, use_relabelled=True):
 
     formulations = {
         "uef":  ("Uncapped edge formulation", kidney_ip.optimise_uuef),
@@ -28,9 +28,9 @@ def solve_kep(digraph, ndds, max_cycle, max_chain, formulation, timelimit, use_r
         formulation_name, formulation_fun = formulations[formulation]
         if use_relabelled:
             opt_result = kidney_ip.optimise_relabelled(formulation_fun,
-                    digraph, ndds, max_cycle, max_chain, timelimit)
+                    digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob)
         else:
-            opt_result = formulation_fun(digraph, ndds, max_cycle, max_chain, timelimit)
+            opt_result = formulation_fun(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob)
         kidney_utils.check_validity(opt_result, digraph, ndds, max_cycle, max_chain)
         opt_result.formulation_name = formulation_name
         return opt_result
@@ -51,6 +51,10 @@ def start():
     parser.add_argument("--timelimit", "-t", required=False, default=None,
             type=float,
             help="IP solver time limit in seconds (default: no time limit)")
+    parser.add_argument("--edge-success-prob", "-p", required=False,
+            type=float, default=1.0,
+            help="Edge success probability, for failure-aware matching. " +
+                 "This can only be used with PICEF and cycle formulation. (default: 1)")
             
     args = parser.parse_args()
     args.formulation = args.formulation.lower()
@@ -69,13 +73,14 @@ def start():
         
     start_time = time.time()
     opt_solution = solve_kep(d, altruists, args.cycle_cap, args.chain_cap,
-                             args.formulation, args.timelimit, args.use_relabelled)
+                             args.formulation, args.edge_success_prob, args.timelimit, args.use_relabelled)
     time_taken = time.time() - start_time
     print "formulation: {}".format(args.formulation)
     print "formulation_name: {}".format(opt_solution.formulation_name)
     print "using_relabelled: {}".format(args.use_relabelled)
     print "cycle_cap: {}".format(args.cycle_cap)
     print "chain_cap: {}".format(args.chain_cap)
+    print "edge_success_prob: {}".format(args.edge_success_prob)
     print "ip_time_limit: {}".format(args.timelimit)
     print "ip_vars: {}".format(opt_solution.ip_model.numVars)
     print "ip_constrs: {}".format(opt_solution.ip_model.numConstrs)

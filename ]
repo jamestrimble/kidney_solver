@@ -24,13 +24,13 @@ class OptSolution(object):
         total_score: The total score of the solution
     """
 
-    def __init__(self, ip_model, cycles, chains, digraph, edge_success_prob=1):
+    def __init__(self, ip_model, cycles, chains, digraph):
         self.ip_model = ip_model
         self.cycles = cycles
         self.chains = chains
         self.digraph = digraph
         self.total_score = (sum(c.score for c in chains) +
-                sum(failure_aware_cycle_score(c, digraph, edge_success_prob) for c in cycles))
+                sum(cycle_score(c, digraph) for c in cycles))
 
     def display(self):
         """Print the optimal cycles and chains to standard output."""
@@ -68,7 +68,7 @@ class OptSolution(object):
                              for c in self.chains]
         return OptSolution(self.ip_model, relabelled_cycles, relabelled_chains, new_digraph)
 
-def optimise_relabelled(formulation_fun, digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob=1):
+def optimise_relabelled(formulation_fun, digraph, ndds, max_cycle, max_chain, timelimit):
     """Optimise on a relabelled graph such that vertices are sorted in descending
         order of (indegree + outdegree)"""
 
@@ -91,7 +91,7 @@ def optimise_relabelled(formulation_fun, digraph, ndds, max_cycle, max_chain, ti
     relabelled_ndds = create_relabelled_ndds(ndds, old_to_new_vtx)
 
     opt_result = formulation_fun(relabelled_digraph, relabelled_ndds,
-                                 max_cycle, max_chain, timelimit, edge_success_prob)
+                                 max_cycle, max_chain, timelimit)
 
     return opt_result.relabelled_copy(sorted_vertices, digraph)
 
@@ -152,7 +152,7 @@ def add_unlimited_vars_and_constraints(digraph, ndds, m):
     for v in digraph.vs:
         m.addConstr(quicksum(v.grb_vars_in) >= quicksum(v.grb_vars_out))
 
-def optimise_uuef(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob=1):
+def optimise_uuef(digraph, ndds, max_cycle, max_chain, timelimit):
     """Optimise using the uncapped edge formulation.
 
     Args:
@@ -164,9 +164,6 @@ def optimise_uuef(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_p
     Returns:
         an OptSolution object
     """
-
-    if edge_success_prob != 1:
-        raise ValueError("This formulation does not support failure-aware matching.")
 
     m = create_ip_model(timelimit)
 
@@ -198,7 +195,7 @@ def optimise_uuef(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_p
 #                                                                                                 #
 ###################################################################################################
 
-def add_chain_vars_and_constraints(digraph, ndds, max_chain, m, vtx_to_vars, store_edge_positions=False):
+def add_chain_vars_and_constraints(digraph, ndds, max_chain, m, vtx_to_vars):
     """Add the IP variables and constraints for chains in PICEF and HPIEF'.
 
     Args:
@@ -231,14 +228,10 @@ def add_chain_vars_and_constraints(digraph, ndds, max_chain, m, vtx_to_vars, sto
         # Add pair->pair edge variables, indexed by position in chain
         for e in digraph.es:
             e.grb_vars = []
-            if store_edge_positions:
-                e.grb_var_positions = []
             for i in range(max_chain-1):
                 if dists_from_ndd[e.src.id] <= i+1:
                     edge_var = m.addVar(vtype=GRB.BINARY)
                     e.grb_vars.append(edge_var)
-                    if store_edge_positions:
-                        e.grb_var_positions.append(i+1)
                     vtx_to_vars[e.tgt.id].append(edge_var)
                     e.src.grb_vars_out[i].append(edge_var)
                     if i < max_chain-2:
@@ -346,7 +339,7 @@ def add_hpief_prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m,
 
     return vars_and_edges
 
-def optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob=1, full_red=False):
+def optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit, full_red=False):
     """Optimise using the HPIEF' formulation.
 
     Args:
@@ -359,9 +352,6 @@ def optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_su
     Returns:
         an OptSolution object
     """
-
-    if edge_success_prob != 1:
-        raise ValueError("This formulation does not support failure-aware matching.")
 
     # This IP model is based on HPIEF, but does not include cycle-edges at position zero.
     
@@ -407,8 +397,8 @@ def optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_su
                        chains=[] if max_chain==0 else kidney_utils.get_optimal_chains(digraph, ndds),
                        digraph=digraph)
 
-def optimise_hpief_prime_full_red(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob=1):
-    return optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob, True)
+def optimise_hpief_prime_full_red(digraph, ndds, max_cycle, max_chain, timelimit):
+    return optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit, True)
 
 ###################################################################################################
 #                                                                                                 #
@@ -512,7 +502,7 @@ def add_hpief_2prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m
 
     return vars_and_edges
 
-def optimise_hpief_2prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob=1, full_red=False):
+def optimise_hpief_2prime(digraph, ndds, max_cycle, max_chain, timelimit, full_red=False):
     """Optimise using the HPIEF'' formulation.
 
     Args:
@@ -525,9 +515,6 @@ def optimise_hpief_2prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_s
     Returns:
         an OptSolution object
     """
-
-    if edge_success_prob != 1:
-        raise ValueError("This formulation does not support failure-aware matching.")
 
     if max_cycle < 3:
         return optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit, full_red)
@@ -579,8 +566,8 @@ def optimise_hpief_2prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_s
                        chains=[] if max_chain==0 else kidney_utils.get_optimal_chains(digraph, ndds),
                        digraph=digraph)
 
-def optimise_hpief_2prime_full_red(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob=1):
-    return optimise_hpief_2prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob, True)
+def optimise_hpief_2prime_full_red(digraph, ndds, max_cycle, max_chain, timelimit):
+    return optimise_hpief_2prime(digraph, ndds, max_cycle, max_chain, timelimit, True)
 
 ###################################################################################################
 #                                                                                                 #
@@ -611,7 +598,7 @@ def optimise_picef(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_
     
     vtx_to_vars = [[] for __ in digraph.vs]
     
-    add_chain_vars_and_constraints(digraph, ndds, max_chain, m, vtx_to_vars, store_edge_positions=edge_success_prob!=1)
+    add_chain_vars_and_constraints(digraph, ndds, max_chain, m, vtx_to_vars)
 
     for i, c in enumerate(cycles):
         for v in c:
@@ -622,32 +609,20 @@ def optimise_picef(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_
             m.addConstr(quicksum(l) <= 1)
 
     if max_chain==0:
-        obj_expr = quicksum(failure_aware_cycle_score(c, digraph, edge_success_prob) * var for c, var in zip(cycles, cycle_vars))
+        obj_expr = quicksum(cycle_score(c, digraph) * var for (c, var) in zip(cycles, cycle_vars))
     else:
-        if edge_success_prob == 1:
-            obj_expr = ( quicksum(cycle_score(c, digraph) * var for c, var in zip(cycles, cycle_vars)) +
-                         quicksum(e.score * e.edge_var for ndd in ndds for e in ndd.edges) +
-                         quicksum(e.score * var for e in digraph.es for var in e.grb_vars) )
-        else:
-            obj_expr = ( quicksum(failure_aware_cycle_score(c, digraph, edge_success_prob) * var for c, var in zip(cycles, cycle_vars)) +
-                         quicksum(e.score*edge_success_prob * e.edge_var for ndd in ndds for e in ndd.edges) +
-                         quicksum(e.score*edge_success_prob**(pos+1) * var
-                                for e in digraph.es for var, pos in zip(e.grb_vars, e.grb_var_positions)) )
+        obj_expr = ( quicksum(cycle_score(c, digraph) * var for (c, var) in zip(cycles, cycle_vars)) +
+                     quicksum(e.score*edge_success_prob * e.edge_var for ndd in ndds for e in ndd.edges) +
+                     quicksum(e.score * var for e in digraph.es for var in e.grb_vars) )
 
     m.setObjective(obj_expr, GRB.MAXIMIZE)
     m.optimize()
 
     return OptSolution(ip_model=m,
                        cycles=[c for c, v in zip(cycles, cycle_vars) if v.x > 0.5],
-                       chains=[] if max_chain==0 else kidney_utils.get_optimal_chains(digraph, ndds, edge_success_prob),
-                       digraph=digraph,
-                       edge_success_prob=edge_success_prob)
+                       chains=[] if max_chain==0 else kidney_utils.get_optimal_chains(digraph, ndds),
+                       digraph=digraph)
 
-###################################################################################################
-#                                                                                                 #
-#                                        Cycle formulation                                        #
-#                                                                                                 #
-###################################################################################################
 
 def optimise_ccf(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob=1):
     """Optimise using the cycle formulation (with one var per cycle and one var per chain).
@@ -663,7 +638,7 @@ def optimise_ccf(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_pr
     """
 
     cycles = digraph.find_cycles(max_cycle)
-    chains = find_chains(digraph, ndds, max_chain, edge_success_prob)
+    chains = find_chains(digraph, ndds, max_chain)
         
     m = create_ip_model(timelimit)
     m.params.method = 2
@@ -689,7 +664,7 @@ def optimise_ccf(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_pr
         if len(l) > 0:
             m.addConstr(quicksum(l) <= 1)
 
-    obj_expr = (quicksum(failure_aware_cycle_score(c, digraph, edge_success_prob) * var for (c, var) in zip(cycles, cycle_vars)) +
+    obj_expr = (quicksum(cycle_score(c, digraph) * var for (c, var) in zip(cycles, cycle_vars)) +
                 quicksum(c.score * var for (c, var) in zip(chains, chain_vars)))
         
     m.setObjective(obj_expr, GRB.MAXIMIZE)
@@ -698,5 +673,4 @@ def optimise_ccf(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_pr
     return OptSolution(ip_model=m,
                        cycles=[c for c, v in zip(cycles, cycle_vars) if v.x > 0.5],
                        chains=[c for c, v in zip(chains, chain_vars) if v.x > 0.5],
-                       digraph=digraph,
-                       edge_success_prob=edge_success_prob)
+                       digraph=digraph)

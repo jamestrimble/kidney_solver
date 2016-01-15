@@ -1,6 +1,7 @@
 from kidney_solver.kidney_digraph import *
 import kidney_solver.kidney_ip as k_ip
 import kidney_solver.kidney_ndds as k_ndds
+import kidney_solver.kidney_utils as k_utils
 
 def read_with_ndds(basename):
     with open(basename + ".input") as f:
@@ -39,6 +40,32 @@ def test_single_cycle_instance():
                 assert len(opt_result.chains) == 1
             else:
                 assert len(opt_result.chains) == 0
+
+def test_failure_aware():
+    # Use instance with a 3-cycle and a 3-chain
+    d, ndds = read_with_ndds("test-fixtures/3cycle_and_3chain")
+    fns = [k_ip.optimise_picef, k_ip.optimise_ccf]
+    for fn in fns:
+        max_cycle=3; max_chain=2
+        opt_result = fn(d, ndds, max_cycle, max_chain, None, edge_success_prob = .5)
+        # 3 edges * .5**3 for the cycle; .5 + .5**2 for the chain
+        assert opt_result.total_score == 3 * .125 + .75
+        k_utils.check_validity(opt_result, d, ndds, max_cycle, max_chain)
+
+        max_cycle=3; max_chain=3
+        opt_result = fn(d, ndds, max_cycle, max_chain, None, edge_success_prob = .5)
+        assert opt_result.total_score == 3 * .125 + .875
+        k_utils.check_validity(opt_result, d, ndds, max_cycle, max_chain)
+
+        max_cycle=0; max_chain=3
+        opt_result = fn(d, ndds, max_cycle, max_chain, None, edge_success_prob = .5)
+        assert opt_result.total_score == .875
+        k_utils.check_validity(opt_result, d, ndds, max_cycle, max_chain)
+
+        max_cycle=3; max_chain=0
+        opt_result = fn(d, ndds, max_cycle, max_chain, None, edge_success_prob = .5)
+        assert opt_result.total_score == 3 * .125
+        k_utils.check_validity(opt_result, d, ndds, max_cycle, max_chain)
 
 def test_weighted_instance():
     """Checks that the capped formulations agree on the optimal

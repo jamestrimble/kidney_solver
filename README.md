@@ -17,15 +17,17 @@ The program `utils/convert.py` can be used to convert from `.wmd` format.
 
 The `kidney_solver` program has three required command-line arguments: cycle cap, chain cap, and formulation. Note that the chain cap is the maximum permitted number of edges in a chain, _excluding the dummy arc to the NDD_. The formulation can be:
 
-- uef: Edge formulation with unrestricted cycle and chain sizes
-- hpief\_prime: A hybrid PIEF with an additional refinement that avoids the need for variables in first position
-- hpief\_prime\_full\_red: hpief\_prime, with further reduction by generating cycles
-- hpief\_2prime: hpief\_prime, with an additional refinement that avoids the need for variables in position equal to the cycle cap. Note that if the cycle cap is less than 3, hpief\_prime is used instead.
-- hpief\_2prime\_full\_red: hpief\_2prime, with further reduction by generating cycles
-- picef: Position-indexed chain-edge formulation
-- cf: Cycle formulation, with one variable per cycle or chain
+- ``uef``: Edge formulation with unrestricted cycle and chain sizes
+- ``hpief_prime``: A hybrid PIEF with an additional refinement that avoids the need for variables in first position
+- ``hpief_prime_full_red``: ``hpief_prime``, with further reduction by generating cycles
+- ``hpief_2prime``: ``hpief_prime``, with an additional refinement that avoids the need for variables in position equal to the cycle cap. Note that if the cycle cap is less than 3, ``hpief_prime`` is used instead.
+- ``hpief_2prime_full_red``: ``hpief_2prime``, with further reduction by generating cycles
+- ``picef``: Position-indexed chain-edge formulation
+- ``cf``: Cycle formulation, with one variable per cycle or chain
 
-In addition, the optional flag `-r` can be used to solve on a copy of the graph with vertices relabelled in descending order of out-degree plus in-degree, which may result in a smaller IP model. To set a time limit of LIMIT seconds, use `-t LIMIT`.
+The optional flag `-r` can be used to solve on a copy of the graph with vertices relabelled in descending order of out-degree plus in-degree, which may result in a smaller IP model. To set a time limit of LIMIT seconds, use `-t LIMIT`.
+
+If the cycle formulation or PICEF is used, failure-aware matching with uniform edge failure probability can be performed with `-p EDGE-SUCCESS-PROB`.
 
 *Example 1:* .wmd format input
 
