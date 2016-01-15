@@ -253,24 +253,27 @@ def add_chain_vars_and_constraints(digraph, ndds, max_chain, m, vtx_to_vars, sto
 
 ###################################################################################################
 #                                                                                                 #
-#                                               HPIEF'                                            #
+#                                Code shared by HPIEF' and HPIEF''                                #
 #                                                                                                 #
 ###################################################################################################
 
-def add_hpief_prime_vars_partial_red(max_cycle, digraph, m):
+def add_hpief_prime_vars_partial_red(max_cycle, digraph, m, hpief_2_prime=False):
     vars_and_edges = [] # A list of (gurobi_var, position, edge, low_vertex) tuples
+
+    # max_pos is the maximum edge position for which variables may be created
+    max_pos = max_cycle-2 if hpief_2_prime else max_cycle-1
     
     # Index i is in the list edge_vars_in[pos][v][low_v] if and only if
     # vars_and_edges[i] corresponds to an edge at position pos, pointing to vertex
     # v, in low_v's graph copy 
-    edge_vars_in = [[[[] for __ in range(digraph.n)] for __ in range(digraph.n)] for __ in range(max_cycle)]
+    edge_vars_in = [[[[] for __ in range(digraph.n)] for __ in range(digraph.n)] for __ in range(max_pos + 1)]
 
     # Index i is in the list edge_vars_out[pos][v][low_v] if and only if
     # vars_and_edges[i] corresponds to an edge at position pos, leaving vertex
     # v, in low_v's graph copy 
-    edge_vars_out = [[[[] for __ in range(digraph.n)] for __ in range(digraph.n)] for __ in range(max_cycle)]
+    edge_vars_out = [[[[] for __ in range(digraph.n)] for __ in range(digraph.n)] for __ in range(max_pos + 1)]
 
-    for low_vtx in range(len(digraph.vs)-1):
+    for low_vtx in range(digraph.n-2 if hpief_2_prime else digraph.n-1):
         # Length of shortest path from low vertex to each vertex with a higher index
         # Default value is 999999999 (which represents infinity)
         shortest_path_from_lv = digraph.get_shortest_path_from_low_vtx(low_vtx, max_cycle-1) 
@@ -279,7 +282,7 @@ def add_hpief_prime_vars_partial_red(max_cycle, digraph, m):
         for v1 in digraph.vs[low_vtx+1:]:
             for e in v1.edges:
                 if e.tgt.id >=low_vtx:
-                    for pos in xrange(1, max_cycle):
+                    for pos in xrange(1, max_pos + 1):
                         if (shortest_path_from_lv[e.src.id] <= pos and
                                     shortest_path_to_lv[e.tgt.id] < max_cycle - pos):
                             new_var = m.addVar(vtype=GRB.BINARY)
@@ -290,17 +293,21 @@ def add_hpief_prime_vars_partial_red(max_cycle, digraph, m):
     m.update()
     return vars_and_edges, edge_vars_in, edge_vars_out
 
-def add_hpief_prime_vars_full_red(max_cycle, digraph, m):
+def add_hpief_prime_vars_full_red(max_cycle, digraph, m, hpief_2_prime=False):
     vars_and_edges = [] # A list of (gurobi_var, position, edge, low_vertex) tuples
+
+    # max_pos is the maximum edge position for which variables may be created
+    max_pos = max_cycle-2 if hpief_2_prime else max_cycle-1
     
-    edge_vars_in = [[[[] for __ in range(digraph.n)] for __ in range(digraph.n)] for __ in range(max_cycle)]
-    edge_vars_out = [[[[] for __ in range(digraph.n)] for __ in range(digraph.n)] for __ in range(max_cycle)]
+    edge_vars_in = [[[[] for __ in range(digraph.n)] for __ in range(digraph.n)] for __ in range(max_pos + 1)]
+    edge_vars_out = [[[[] for __ in range(digraph.n)] for __ in range(digraph.n)] for __ in range(max_pos + 1)]
 
     edges_seen = set()  # (low_v_id, src_v_id, tgt_v_id, pos) tuples
     for cycle in digraph.generate_cycles(max_cycle):
         for i in range(1, len(cycle)-1):
             edges_seen.add((cycle[0].id, cycle[i].id, cycle[i+1].id, i))
-        edges_seen.add((cycle[0].id, cycle[-1].id, cycle[0].id, len(cycle)-1))
+        if not hpief_2_prime or len(cycle) < max_cycle:
+            edges_seen.add((cycle[0].id, cycle[-1].id, cycle[0].id, len(cycle)-1))
             
     for low_v, src_v, tgt_v, pos in edges_seen:
         new_var = m.addVar(vtype=GRB.BINARY)
@@ -311,6 +318,12 @@ def add_hpief_prime_vars_full_red(max_cycle, digraph, m):
         edge_vars_out[pos][src_v][low_v].append(idx)
     m.update()
     return vars_and_edges, edge_vars_in, edge_vars_out
+
+###################################################################################################
+#                                                                                                 #
+#                                               HPIEF'                                            #
+#                                                                                                 #
+###################################################################################################
 
 def add_hpief_prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m, full_red):
     if full_red:
@@ -410,62 +423,10 @@ def optimise_hpief_prime_full_red(digraph, ndds, max_cycle, max_chain, timelimit
 ###################################################################################################
 
 def add_hpief_2prime_vars_partial_red(max_cycle, digraph, m):
-    vars_and_edges = [] # A list of (gurobi_var, position, edge, low_vertex) tuples
+    return add_hpief_prime_vars_partial_red(max_cycle, digraph, m, hpief_2_prime=True)
     
-    # Index i is in the list edge_vars_in[pos][v][low_v] if and only if
-    # vars_and_edges[i] corresponds to an edge at position pos, pointing to vertex
-    # v, in low_v's graph copy 
-    edge_vars_in = [[[[] for __ in range(digraph.n)] for __ in range(digraph.n)] for __ in range(max_cycle-1)]
-
-    # Index i is in the list edge_vars_out[pos][v][low_v] if and only if
-    # vars_and_edges[i] corresponds to an edge at position pos, leaving vertex
-    # v, in low_v's graph copy 
-    edge_vars_out = [[[[] for __ in range(digraph.n)] for __ in range(digraph.n)] for __ in range(max_cycle-1)]
-
-    for low_vtx in range(len(digraph.vs)-2):
-        # Length of shortest path from low vertex to each vertex with a higher index
-        # Default value is 999999999 (which represents infinity)
-        shortest_path_from_lv = digraph.get_shortest_path_from_low_vtx(low_vtx, max_cycle-1) 
-        shortest_path_to_lv = digraph.get_shortest_path_to_low_vtx(low_vtx, max_cycle-1) 
-
-        for v1 in digraph.vs[low_vtx+1:]:
-            for e in v1.edges:
-                if e.tgt.id >=low_vtx:
-                    for pos in xrange(1, max_cycle-1):
-                        if (shortest_path_from_lv[e.src.id] <= pos and
-                                    shortest_path_to_lv[e.tgt.id] < max_cycle - pos):
-                            new_var = m.addVar(vtype=GRB.BINARY)
-                            vars_and_edges.append((new_var, pos, e, low_vtx))
-                            idx = len(vars_and_edges) - 1 # Index of tuple just added
-                            edge_vars_in[pos][e.tgt.id][low_vtx].append(idx)
-                            edge_vars_out[pos][e.src.id][low_vtx].append(idx)
-    m.update()
-    return vars_and_edges, edge_vars_in, edge_vars_out
-
 def add_hpief_2prime_vars_full_red(max_cycle, digraph, m):
-    vars_and_edges = [] # A list of (gurobi_var, position, edge, low_vertex) tuples
-    
-    edge_vars_in = [[[[] for __ in range(digraph.n)] for __ in range(digraph.n)] for __ in range(max_cycle-1)]
-    edge_vars_out = [[[[] for __ in range(digraph.n)] for __ in range(digraph.n)] for __ in range(max_cycle-1)]
-
-    edges_seen = set()  # (low_v_id, src_v_id, tgt_v_id, pos) tuples
-    for cycle in digraph.generate_cycles(max_cycle):
-        for i in range(1, len(cycle)-1):
-            edges_seen.add((cycle[0].id, cycle[i].id, cycle[i+1].id, i))
-        if len(cycle) < max_cycle:
-            edges_seen.add((cycle[0].id, cycle[-1].id, cycle[0].id, len(cycle)-1))
-            
-    for low_v, src_v, tgt_v, pos in edges_seen:
-        new_var = m.addVar(vtype=GRB.BINARY)
-        e = digraph.adj_mat[src_v][tgt_v]
-        vars_and_edges.append((new_var, pos, e, low_v))
-        idx = len(vars_and_edges) - 1 # Index of tuple just added
-        edge_vars_in[pos][tgt_v][low_v].append(idx)
-        edge_vars_out[pos][src_v][low_v].append(idx)
-
-    m.update()
-
-    return vars_and_edges, edge_vars_in, edge_vars_out
+    return add_hpief_prime_vars_partial_red(max_cycle, digraph, m, hpief_2_prime=True)
 
 def add_hpief_2prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m, full_red):
     if full_red:
