@@ -350,14 +350,11 @@ def add_hpief_prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m,
 
     return vars_and_edges
 
-###################################################################################################
-#                                                                                                 #
-#                                               HPIEF'                                            #
-#                                                                                                 #
-###################################################################################################
+def optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob=1, full_red=False, hpief_2_prime=False):
+    """Optimise using the HPIEF' or HPIEF'' formulation.
 
-def optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob=1, full_red=False):
-    """Optimise using the HPIEF' formulation.
+    The HPIEF' model is based on HPIEF, but does not include cycle-edge variables at position zero.
+    HPIEF'' also removes variables corresponding to edges at the last possible position of a cycle. 
 
     Args:
         ndds: NDDs in the instance
@@ -365,79 +362,7 @@ def optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_su
         max_chain: the chain cap
         timelimit: the Gurobi timeout in seconds, or None for no timeout
         full_red: True if cycles should be generated in order to reduce number of variables further
-
-    Returns:
-        an OptSolution object
-    """
-
-    if edge_success_prob != 1:
-        raise ValueError("This formulation does not support failure-aware matching.")
-
-    # This IP model is based on HPIEF, but does not include cycle-edges at position zero.
-    
-    m = create_ip_model(timelimit)
-    m.params.method = 2
-    m.params.presolve = 0
-
-    # For each vertex v, a list of variables corresponding to in-edges to v
-    vtx_to_in_edges = [[] for __ in digraph.vs]
-
-    add_chain_vars_and_constraints(digraph, ndds, max_chain, m, vtx_to_in_edges)
-
-    vars_and_edges = add_hpief_prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m, full_red)
-
-    obj_terms = []
-    for (var, pos, edge, low_v_id) in vars_and_edges:
-        if pos==1:
-            edge0_score = digraph.adj_mat[low_v_id][edge.src.id].score
-            obj_terms.append((edge0_score + edge.score) * var)
-        else:
-            obj_terms.append(edge.score * var)
-    obj_expr = quicksum(obj_terms)
-   
-    if max_chain > 0:
-        obj_expr += quicksum(e.score * e.edge_var for ndd in ndds for e in ndd.edges) 
-        obj_expr += quicksum(e.score * var for e in digraph.es for var in e.grb_vars)
-    
-    m.setObjective(obj_expr, GRB.MAXIMIZE)
-    m.optimize()
-
-    cycle_start_vv = []
-    cycle_next_vv = {}
-    
-    for (var, pos, edge, low_v_id) in vars_and_edges:
-        if var.x > 0.1:
-            cycle_next_vv[edge.src.id] = edge.tgt.id
-            if pos == 1:
-                cycle_start_vv.append(low_v_id)
-                cycle_next_vv[low_v_id] = edge.src.id
-        
-    return OptSolution(ip_model=m,
-                       cycles=kidney_utils.selected_edges_to_cycles(digraph, cycle_start_vv, cycle_next_vv),
-                       chains=[] if max_chain==0 else kidney_utils.get_optimal_chains(digraph, ndds),
-                       digraph=digraph)
-
-def optimise_hpief_prime_full_red(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob=1):
-    return optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob, True)
-
-###################################################################################################
-#                                                                                                 #
-#                                             HPIEF''                                             #
-#                                                                                                 #
-###################################################################################################
-
-def add_hpief_2prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m, full_red):
-    return add_hpief_prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m, full_red, hpief_2_prime=True)
-
-def optimise_hpief_2prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob=1, full_red=False):
-    """Optimise using the HPIEF'' formulation.
-
-    Args:
-        ndds: NDDs in the instance
-        max_cycle: the cycle cap
-        max_chain: the chain cap
-        timelimit: the Gurobi timeout in seconds, or None for no timeout
-        full_red: True if cycles should be generated in order to reduce number of variables further
+        hpief_2_prime: Use HPIEF''? Default: HPIEF'
 
     Returns:
         an OptSolution object
@@ -447,7 +372,7 @@ def optimise_hpief_2prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_s
         raise ValueError("This formulation does not support failure-aware matching.")
 
     if max_cycle < 3:
-        return optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob, full_red)
+        hpief_2_prime = False
 
     m = create_ip_model(timelimit)
     m.params.method = 2
@@ -458,15 +383,14 @@ def optimise_hpief_2prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_s
 
     add_chain_vars_and_constraints(digraph, ndds, max_chain, m, vtx_to_in_edges)
 
-    vars_and_edges = add_hpief_2prime_vars_and_constraints(
-            max_cycle, digraph, vtx_to_in_edges, m, full_red)
+    vars_and_edges = add_hpief_prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m, full_red, hpief_2_prime)
 
     obj_terms = []
     for var, pos, edge, low_v_id in vars_and_edges:
         score = edge.score
         if pos==1:
             score += digraph.adj_mat[low_v_id][edge.src.id].score
-        if pos==max_cycle - 2 and edge.tgt.id != low_v_id:
+        if hpief_2_prime and pos==max_cycle - 2 and edge.tgt.id != low_v_id:
             score += digraph.adj_mat[edge.tgt.id][low_v_id].score
         obj_terms.append(score * var)
 
@@ -482,22 +406,41 @@ def optimise_hpief_2prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_s
     cycle_start_vv = []
     cycle_next_vv = {}
     
-    for (var, pos, edge, low_v_id) in vars_and_edges:
+    for var, pos, edge, low_v_id in vars_and_edges:
         if var.x > 0.1:
             cycle_next_vv[edge.src.id] = edge.tgt.id
             if pos == 1:
                 cycle_start_vv.append(low_v_id)
                 cycle_next_vv[low_v_id] = edge.src.id
-            if pos == max_cycle - 2 and edge.tgt.id != low_v_id:
+            if hpief_2_prime and pos == max_cycle - 2 and edge.tgt.id != low_v_id:
                 cycle_next_vv[edge.tgt.id] = low_v_id
-    
+        
     return OptSolution(ip_model=m,
                        cycles=kidney_utils.selected_edges_to_cycles(digraph, cycle_start_vv, cycle_next_vv),
                        chains=[] if max_chain==0 else kidney_utils.get_optimal_chains(digraph, ndds),
                        digraph=digraph)
 
+###################################################################################################
+#                                                                                                 #
+#                                               HPIEF'                                            #
+#                                                                                                 #
+###################################################################################################
+
+def optimise_hpief_prime_full_red(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob=1):
+    return optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob, True)
+
+###################################################################################################
+#                                                                                                 #
+#                                             HPIEF''                                             #
+#                                                                                                 #
+###################################################################################################
+
+def optimise_hpief_2prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob=1, full_red=False):
+    return optimise_hpief_prime(digraph, ndds, max_cycle, max_chain, timelimit,
+            edge_success_prob, full_red, hpief_2_prime=True)
+
 def optimise_hpief_2prime_full_red(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob=1):
-    return optimise_hpief_2prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob, True)
+    return optimise_hpief_2prime(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob, full_red=True)
 
 ###################################################################################################
 #                                                                                                 #
