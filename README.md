@@ -55,3 +55,11 @@ cat example_data/MD-00001-00000100.input example_data/MD-00001-00000100.ndds | p
 ```
 
 Note that this will probably run quite a bit quicker if you use Pypy rather than CPython.
+
+## Utility to sparsify instances
+
+The `sparsify.py` instance can be used to delete each edge from an instance with some given probability. The program reads from standard input in the `.input` + `.ndds` format, and writes to standard output in the same format. The probability that each edge will be _kept_ is a command-line argument.
+
+```
+cat example_data/MD-00001-00000100.input example_data/MD-00001-00000100.ndds | python kidney_solver/sparsify.py .05
+```
