@@ -1,6 +1,9 @@
 # Changes each edge weight in a .input or .ndds file to a
-# random number in the range [0, 1]
+# random number in the range [0, 1)
 BEGIN { OFS = "\t"; }
-NR == 1 { print; }
-$1 == -1 { print; exit; }
-NR > 1 { print $1, $2, rand(); }
+
+# If the line represents and edge, replace weight with a random number 
+NF == 3 && $1 != -1 { print $1, $2, rand(); next }
+
+# Otherwise, just print the line without changes
+{ print }
