@@ -63,3 +63,17 @@ The `sparsify.py` instance can be used to delete each edge from an instance with
 ```
 cat example_data/MD-00001-00000100.input example_data/MD-00001-00000100.ndds | python kidney_solver/sparsify.py .05
 ```
+
+## Utilities to randomise edge weights
+
+The `utils/add_random_real_weights.awk` tool sets the weights on edges to random numbers in the range [0,1). Set the random-number seed on the command line using the `seed` variable:
+
+```
+cat example_data/MD-00001-00000100.input | awk -f utils/add_random_real_weights.awk -v seed=$RANDOM
+```
+
+The `utils/add_random_real_weights.awk` tool sets the weights on edges to random integers in the range [`lower`, `upper`), where the variables `lower` and `upper` are set on the command line. Set the random-number seed on the command line using the `seed` variable:
+
+```
+cat example_data/MD-00001-00000100.input | awk -f utils/add_random_integer_weights.awk -v seed=$RANDOM -v lower=5 -v upper=10
+```
