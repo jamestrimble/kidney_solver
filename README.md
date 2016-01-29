@@ -77,3 +77,16 @@ The `utils/add_random_real_weights.awk` tool sets the weights on edges to random
 ```
 cat example_data/MD-00001-00000100.input | awk -f utils/add_random_integer_weights.awk -v seed=$RANDOM -v lower=5 -v upper=10
 ```
+
+## Alternatives
+
+This is a (probably very incomplete) list of other software for kidney exchange.
+
+- https://github.com/rma350/kidneyExchange
+- https://github.com/JohnDickerson/KidneyExchange
+- https://github.com/ptoulis/kidney-exchange
+
+## Contact
+
+I'd be more than happy to try to answer any questions: james.trimble at yahoo.co.uk
+
