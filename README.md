@@ -14,7 +14,7 @@ The program reads an instance from standard input, and writes the result to stan
 
 If NDDs are used, the input described above is followed by additional data in a very similar format. The `.ndds` file in the `example_data` directory, for example, has 6 NDDs and 188 edges from NDDs. NDDs are numbered from zero. The edges are in _source-NDD target-pair weight_ format.
 
-The program `utils/convert.py` can be used to convert from `.wmd` format.
+The program `utils/convert.py` can be used to convert from `.wmd` format. (Generated instances in this format can be found on [PrefLib](http://www.preflib.org/data/matching/kidney/).)
 
 The `kidney_solver` program has three required command-line arguments: cycle cap, chain cap, and formulation. Note that the chain cap is the maximum permitted number of edges in a chain, _excluding the dummy arc to the NDD_. The formulation can be:
 
