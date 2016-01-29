@@ -72,7 +72,7 @@ The `utils/add_random_real_weights.awk` tool sets the weights on edges to random
 cat example_data/MD-00001-00000100.input | awk -f utils/add_random_real_weights.awk -v seed=$RANDOM
 ```
 
-The `utils/add_random_real_weights.awk` tool sets the weights on edges to random integers in the range [`lower`, `upper`), where the variables `lower` and `upper` are set on the command line. Set the random-number seed on the command line using the `seed` variable:
+The `utils/add_random_integer_weights.awk` tool sets the weights on edges to random integers in the range [`lower`, `upper`), where the variables `lower` and `upper` are set on the command line. Set the random-number seed on the command line using the `seed` variable:
 
 ```
 cat example_data/MD-00001-00000100.input | awk -f utils/add_random_integer_weights.awk -v seed=$RANDOM -v lower=5 -v upper=10
