@@ -42,7 +42,7 @@ else:
     dummy_edges = []
     for i in range(n_pairs):
         for j in range(n_pairs, n_pairs+n_ndds):
-            dummy_edges.append(Edge(i, j, -1))
+            dummy_edges.append(Edge(i, j, 0))
 
     all_edges = pair_edges + ndd_edges + dummy_edges
 
