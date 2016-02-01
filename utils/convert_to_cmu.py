@@ -50,7 +50,7 @@ else:
     
     for edge in all_edges:
         # Print source, target, weight, (1 if target is an NDD else 0)
-        print "{}\t{}\t{}\t{}\t_".format(edge.src, edge.tgt, edge.weight,
+        print "{}\t{}\t{}\t{}\t0".format(edge.src, edge.tgt, edge.weight,
                                         1 if edge.tgt >= n_pairs else 0)
 
     print "-1\t-1\t-1"
