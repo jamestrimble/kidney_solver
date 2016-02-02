@@ -80,11 +80,14 @@ def test_weighted_instance():
             k_ip.optimise_hpief_2prime,
             k_ip.optimise_hpief_prime_full_red,
             k_ip.optimise_hpief_2prime_full_red,
-            k_ip.optimise_picef, k_ip.optimise_ccf]
+            k_ip.optimise_picef, k_ip.optimise_ccf,
+            k_ip.optimise_eef]
     for max_cycle in [0, 1, 2, 3, 4]:
         for max_chain in [0, 1, 2, 3]:
             opt_result_0 = fns[0](k_ip.OptConfig(d, ndds, max_cycle, max_chain))
             for fn in fns[1:]:
+                if max_chain > 0 and fn==k_ip.optimise_eef:
+                    continue
                 opt_result = fn(k_ip.OptConfig(d, ndds, max_cycle, max_chain))
                 print max_cycle, max_chain, opt_result.total_score, \
                         opt_result.ip_model.obj_val, opt_result_0.total_score, fn

@@ -580,3 +580,163 @@ def optimise_ccf(cfg):
                        chains=[c for c, v in zip(chains, chain_vars) if v.x > 0.5],
                        digraph=cfg.digraph,
                        edge_success_prob=cfg.edge_success_prob)
+
+###################################################################################################
+#                                                                                                 #
+#                                    Extended Edge Formulation                                    # 
+#                                                                                                 #
+###################################################################################################
+
+def add_eef_vars_partial_red(max_cycle, digraph, m):
+    vars_and_edges = [] # A list of (gurobi_var, edge, low_vertex) tuples
+
+    # Index i is in the list edge_vars_in[v][low_v] if and only if
+    # vars_and_edges[i] corresponds to an edge pointing to vertex v, in low_v's graph copy 
+    edge_vars_in = [[[] for __ in range(digraph.n)] for __ in range(digraph.n)]
+
+    # Index i is in the list edge_vars_out[pos][v][low_v] if and only if
+    # vars_and_edges[i] corresponds to an edge leaving vertex v, in low_v's graph copy 
+    edge_vars_out = [[[] for __ in range(digraph.n)] for __ in range(digraph.n)]
+
+    for low_vtx in range(digraph.n-2 if hpief_2_prime else digraph.n-1):
+        # Length of shortest path from low vertex to each vertex with a higher index
+        # Default value is 999999999 (which represents infinity)
+        shortest_path_from_lv = digraph.get_shortest_path_from_low_vtx(low_vtx, max_cycle-1) 
+        shortest_path_to_lv = digraph.get_shortest_path_to_low_vtx(low_vtx, max_cycle-1) 
+
+        for v1 in digraph.vs[low_vtx+1:]:
+            for e in v1.edges:
+                if e.tgt.id >=low_vtx:
+                    for pos in xrange(1, max_cycle):
+                        if (shortest_path_from_lv[e.src.id] <= pos and
+                                    shortest_path_to_lv[e.tgt.id] < max_cycle - pos):
+                            new_var = m.addVar(vtype=GRB.BINARY)
+                            vars_and_edges.append((new_var, pos, e, low_vtx))
+                            idx = len(vars_and_edges) - 1 # Index of tuple just added
+                            edge_vars_in[pos][e.tgt.id][low_vtx].append(idx)
+                            edge_vars_out[pos][e.src.id][low_vtx].append(idx)
+    m.update()
+    return vars_and_edges, edge_vars_in, edge_vars_out
+
+def add_eef_vars_full_red(max_cycle, digraph, m):
+    vars_and_edges = [] # A list of (gurobi_var, edge, low_vertex) tuples
+
+    edge_vars_in = [[[] for __ in range(digraph.n)] for __ in range(digraph.n)]
+    edge_vars_out = [[[] for __ in range(digraph.n)] for __ in range(digraph.n)]
+
+    edges_seen = set()  # (low_v_id, src_v_id, tgt_v_id, pos) tuples
+    for cycle in digraph.generate_cycles(max_cycle):
+        for i in range(1, len(cycle)-1):
+            edges_seen.add((cycle[0].id, cycle[i].id, cycle[i+1].id, i))
+        if not hpief_2_prime or len(cycle) < max_cycle:
+            edges_seen.add((cycle[0].id, cycle[-1].id, cycle[0].id, len(cycle)-1))
+            
+    for low_v, src_v, tgt_v, pos in edges_seen:
+        new_var = m.addVar(vtype=GRB.BINARY)
+        e = digraph.adj_mat[src_v][tgt_v]
+        vars_and_edges.append((new_var, pos, e, low_v))
+        idx = len(vars_and_edges) - 1 # Index of tuple just added
+        edge_vars_in[pos][tgt_v][low_v].append(idx)
+        edge_vars_out[pos][src_v][low_v].append(idx)
+    m.update()
+    return vars_and_edges, edge_vars_in, edge_vars_out
+
+def add_hpief_prime_vars_and_constraints(max_cycle, digraph, vtx_to_in_edges, m, full_red, hpief_2_prime=False):
+    max_pos = max_cycle-2 if hpief_2_prime else max_cycle-1
+
+    if full_red:
+        vars_and_edges, edge_vars_in, edge_vars_out = add_hpief_prime_vars_full_red(max_cycle, digraph, m, hpief_2_prime)
+    else:
+        vars_and_edges, edge_vars_in, edge_vars_out = add_hpief_prime_vars_partial_red(max_cycle, digraph, m, hpief_2_prime)
+    
+    for grb_var, pos, edge, low_vtx in vars_and_edges:
+        vtx_to_in_edges[edge.tgt.id].append(grb_var)
+        if pos==1:
+            vtx_to_in_edges[edge.src.id].append(grb_var)
+        if hpief_2_prime and pos == max_cycle - 2 and edge.tgt.id != low_vtx:
+            vtx_to_in_edges[low_vtx].append(grb_var)
+        
+    # Capacity constraint for vertices
+    for l in vtx_to_in_edges:
+        if len(l) > 0:
+            m.addConstr(quicksum(l) <= 1)
+    
+    # Cycle flow-conservation constraint for vertices
+    for pos in range(1, max_pos):
+        for v in range(digraph.n):
+            for low_v_id in range(v):
+                in_vars  = [vars_and_edges[i][0] for i in edge_vars_in[pos][v][low_v_id]]
+                out_vars = [vars_and_edges[i][0] for i in edge_vars_out[pos+1][v][low_v_id]]
+                if len(in_vars) > 0 or len(out_vars) > 0:
+                    m.addConstr(quicksum(in_vars) == quicksum(out_vars))
+
+    return vars_and_edges
+
+def optimise_hpief_prime(cfg, full_red=False, hpief_2_prime=False):
+    """Optimise using the HPIEF' or HPIEF'' formulation.
+
+    The HPIEF' model is based on HPIEF, but does not include cycle-edge variables at position zero.
+    HPIEF'' also removes variables corresponding to edges at the last possible position of a cycle. 
+
+    Args:
+        cfg: an OptConfig object
+        full_red: True if cycles should be generated in order to reduce number of variables further
+        hpief_2_prime: Use HPIEF''? Default: HPIEF'
+
+    Returns:
+        an OptSolution object
+    """
+
+    if cfg.edge_success_prob != 1:
+        raise ValueError("This formulation does not support failure-aware matching.")
+
+    if cfg.max_cycle < 3:
+        hpief_2_prime = False
+
+    m = create_ip_model(cfg.timelimit)
+    m.params.method = 2
+    m.params.presolve = 0
+
+    # For each vertex v, a list of variables corresponding to in-edges to v
+    vtx_to_in_edges = [[] for __ in cfg.digraph.vs]
+
+    add_chain_vars_and_constraints(cfg.digraph, cfg.ndds, cfg.max_chain, m, vtx_to_in_edges)
+
+    vars_and_edges = add_hpief_prime_vars_and_constraints(
+            cfg.max_cycle, cfg.digraph, vtx_to_in_edges, m, full_red, hpief_2_prime)
+
+    obj_terms = []
+    for var, pos, edge, low_v_id in vars_and_edges:
+        score = edge.score
+        if pos==1:
+            score += cfg.digraph.adj_mat[low_v_id][edge.src.id].score
+        if hpief_2_prime and pos==cfg.max_cycle - 2 and edge.tgt.id != low_v_id:
+            score += cfg.digraph.adj_mat[edge.tgt.id][low_v_id].score
+        obj_terms.append(score * var)
+
+    obj_expr = quicksum(obj_terms)
+   
+    if cfg.max_chain > 0:
+        obj_expr += quicksum(e.score * e.edge_var for ndd in cfg.ndds for e in ndd.edges) 
+        obj_expr += quicksum(e.score * var for e in cfg.digraph.es for var in e.grb_vars)
+    
+    m.setObjective(obj_expr, GRB.MAXIMIZE)
+    m.optimize()
+
+    cycle_start_vv = []
+    cycle_next_vv = {}
+    
+    for var, pos, edge, low_v_id in vars_and_edges:
+        if var.x > 0.1:
+            cycle_next_vv[edge.src.id] = edge.tgt.id
+            if pos == 1:
+                cycle_start_vv.append(low_v_id)
+                cycle_next_vv[low_v_id] = edge.src.id
+            if hpief_2_prime and pos == cfg.max_cycle - 2 and edge.tgt.id != low_v_id:
+                cycle_next_vv[edge.tgt.id] = low_v_id
+        
+    return OptSolution(ip_model=m,
+                       cycles=kidney_utils.selected_edges_to_cycles(
+                                    cfg.digraph, cycle_start_vv, cycle_next_vv),
+                       chains=[] if cfg.max_chain==0 else kidney_utils.get_optimal_chains(cfg.digraph, cfg.ndds),
+                       digraph=cfg.digraph)
