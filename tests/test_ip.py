@@ -47,12 +47,28 @@ def test_single_cycle_instance():
 def test_instance_with_two_2cycles():
     d, ndds = read_with_ndds("test-fixtures/two_2cycles")
     fns = [k_ip.optimise_uuef,
+            k_ip.optimise_eef, k_ip.optimise_eef_full_red,
+            k_ip.optimise_hpief_prime_full_red, k_ip.optimise_hpief_2prime_full_red,
             k_ip.optimise_hpief_prime, k_ip.optimise_hpief_2prime,
             k_ip.optimise_picef, k_ip.optimise_ccf]
     for fn in fns:
         opt_result = fn(k_ip.OptConfig(d, ndds, 3, 0))
         assert len(opt_result.cycles) == 1
         assert opt_result.total_score == 40
+
+def test_preflib_instance_with_zero_chain_cap():
+    d, ndds = read_with_ndds("test-fixtures/MD-00001-00000100")
+    fns = [ k_ip.optimise_eef, k_ip.optimise_eef_full_red,
+            k_ip.optimise_hpief_prime_full_red, k_ip.optimise_hpief_2prime_full_red,
+            k_ip.optimise_hpief_prime, k_ip.optimise_hpief_2prime,
+            k_ip.optimise_picef, k_ip.optimise_ccf]
+    for fn in fns:
+        max_cycle = 4
+        max_chain = 0
+        opt_result = fn(k_ip.OptConfig(d, ndds, max_cycle, max_chain))
+        k_utils.check_validity(opt_result, d, ndds, max_cycle, max_chain)
+        print fn
+        assert opt_result.total_score == 39 
 
 def test_failure_aware():
     # Use instance with a 3-cycle and a 3-chain
@@ -81,14 +97,16 @@ def test_weighted_instance():
             k_ip.optimise_hpief_prime_full_red,
             k_ip.optimise_hpief_2prime_full_red,
             k_ip.optimise_picef, k_ip.optimise_ccf,
-            k_ip.optimise_eef]
+            k_ip.optimise_eef, k_ip.optimise_eef_full_red]
     for max_cycle in [0, 1, 2, 3, 4]:
         for max_chain in [0, 1, 2, 3]:
             opt_result_0 = fns[0](k_ip.OptConfig(d, ndds, max_cycle, max_chain))
+            k_utils.check_validity(opt_result_0, d, ndds, max_cycle, max_chain)
             for fn in fns[1:]:
-                if max_chain > 0 and fn==k_ip.optimise_eef:
+                if max_chain > 0 and fn in [k_ip.optimise_eef, k_ip.optimise_eef_full_red]:
                     continue
                 opt_result = fn(k_ip.OptConfig(d, ndds, max_cycle, max_chain))
+                k_utils.check_validity(opt_result, d, ndds, max_cycle, max_chain)
                 print max_cycle, max_chain, opt_result.total_score, \
                         opt_result.ip_model.obj_val, opt_result_0.total_score, fn
                 assert abs(opt_result.total_score - opt_result_0.total_score) < EPS

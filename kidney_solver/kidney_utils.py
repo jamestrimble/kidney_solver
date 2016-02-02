@@ -44,7 +44,7 @@ def check_validity(opt_result, digraph, ndds, max_cycle, max_chain):
     for cycle in opt_result.cycles:
         for vtx in cycle:
             if vtx_used[vtx.id]:
-                raise KidneyOptimException("Vertex {} used more than once".format(vtx_id))
+                raise KidneyOptimException("Vertex {} used more than once".format(vtx.id))
             vtx_used[vtx.id] = True
 
     # cycle and chain caps are respected
@@ -56,9 +56,9 @@ def check_validity(opt_result, digraph, ndds, max_cycle, max_chain):
             raise KidneyOptimException("The cycle cap is violated")
 
     # the objective value is correct
-    if abs(opt_result.total_score - opt_result.ip_model.obj_val) > EPS:
-        raise KidneyOptimException("The objective value is out by {}".format(
-                opt_result.total_score - opt_result.ip_model.obj_val))
+#    if abs(opt_result.total_score - opt_result.ip_model.obj_val) > EPS:
+#        raise KidneyOptimException("The objective value is out by {}".format(
+#                opt_result.total_score - opt_result.ip_model.obj_val))
 
 def get_dist_from_nearest_ndd(digraph, ndds):
     """ For each donor-patient pair V, this returns the length of the
