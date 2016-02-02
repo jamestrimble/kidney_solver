@@ -30,7 +30,10 @@ def test_chains_only_instance():
 def test_single_cycle_instance():
     d, ndds = read_with_ndds("test-fixtures/one-cycle")
     fns = [k_ip.optimise_uuef,
-            k_ip.optimise_hpief_prime_full_red, k_ip.optimise_hpief_2prime_full_red,
+            k_ip.optimise_hpief_prime,
+            k_ip.optimise_hpief_2prime,
+            k_ip.optimise_hpief_prime_full_red,
+            k_ip.optimise_hpief_2prime_full_red,
             k_ip.optimise_picef, k_ip.optimise_ccf]
     for max_chain in [0, 1, 2]:
         for fn in fns:
@@ -40,6 +43,16 @@ def test_single_cycle_instance():
                 assert len(opt_result.chains) == 1
             else:
                 assert len(opt_result.chains) == 0
+
+def test_instance_with_two_2cycles():
+    d, ndds = read_with_ndds("test-fixtures/two_2cycles")
+    fns = [k_ip.optimise_uuef,
+            k_ip.optimise_hpief_prime, k_ip.optimise_hpief_2prime,
+            k_ip.optimise_picef, k_ip.optimise_ccf]
+    for fn in fns:
+        opt_result = fn(k_ip.OptConfig(d, ndds, 3, 0))
+        assert len(opt_result.cycles) == 1
+        assert opt_result.total_score == 40
 
 def test_failure_aware():
     # Use instance with a 3-cycle and a 3-chain

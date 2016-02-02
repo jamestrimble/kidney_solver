@@ -296,7 +296,7 @@ def add_hpief_prime_vars_partial_red(max_cycle, digraph, m, hpief_2_prime=False)
     # v, in low_v's graph copy 
     edge_vars_out = [[[[] for __ in range(digraph.n)] for __ in range(digraph.n)] for __ in range(max_pos + 1)]
 
-    for low_vtx in range(digraph.n-2 if hpief_2_prime else digraph.n-1):
+    for low_vtx in range(digraph.n-1):
         # Length of shortest path from low vertex to each vertex with a higher index
         # Default value is 999999999 (which represents infinity)
         shortest_path_from_lv = digraph.get_shortest_path_from_low_vtx(low_vtx, max_cycle-1) 
