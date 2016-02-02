@@ -681,6 +681,16 @@ def add_eef_vars_and_constraints(max_cycle, digraph, m, full_red):
                 edge_vars_not_leaving_l.append(var)
         m.addConstr(quicksum((max_cycle-1) * var for var in edge_vars_leaving_l) >=
                     quicksum(edge_vars_not_leaving_l))
+        # The commented-out code below is constraint (9e) from 
+        # Constantino et al. TODO: compare run-times using the code below
+        # with run-times using the code above.
+        ##sum_of_edge_vars_leaving_l = quicksum(vars_and_edges[i][0] for i in edge_vars_out[low_v_id][low_v_id])
+        ##for i in range(low_v_id+1, digraph.n):
+        ##    vars_leaving_i = [vars_and_edges[j][0] for j in edge_vars_out[low_v_id][i]]
+        ##    if len(vars_leaving_i):
+        ##        m.addConstr(quicksum(vars_leaving_i) <=
+        ##                    sum_of_edge_vars_leaving_l)
+
 
     return vars_and_edges
 
