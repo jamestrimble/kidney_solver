@@ -61,7 +61,7 @@ def start():
     args = parser.parse_args()
     args.formulation = args.formulation.lower()
 
-    input_lines = [line for line in sys.stdin]
+    input_lines = [line for line in sys.stdin if len(line.strip()) > 0]
     n_digraph_edges = int(input_lines[0].split()[1])
     digraph_lines = input_lines[:n_digraph_edges + 2]
 
