@@ -1,0 +1,1 @@
+Test EEF with and without -s option
