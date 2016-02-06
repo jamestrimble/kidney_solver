@@ -649,8 +649,10 @@ def add_eef_vars_and_constraints(max_cycle, digraph, m, full_red, eef_alt_symmet
     
     # For each vertex v, a list of variables corresponding to in-edges to v
     vtx_to_in_edges = [[] for __ in digraph.vs]
+    vtx_to_out_edges = [[] for __ in digraph.vs] # FIXME: should only be in new version
     for grb_var, edge, low_vtx in vars_and_edges:
         vtx_to_in_edges[edge.tgt.id].append(grb_var)
+        vtx_to_out_edges[edge.src.id].append(grb_var)
         
     # Capacity constraint for vertices
     for l in vtx_to_in_edges:
@@ -665,27 +667,37 @@ def add_eef_vars_and_constraints(max_cycle, digraph, m, full_red, eef_alt_symmet
             if len(in_vars) > 0 or len(out_vars) > 0:
                 m.addConstr(quicksum(in_vars) == quicksum(out_vars))
 
-    for low_v_id in range(v):
-        edge_indices_in_graph_copy = [i for indices in edge_vars_in[low_v_id] for i in indices]
+    if eef_alt_symmetry_break:
+        for low_v_id in range(v):
+            edge_indices_in_graph_copy = [i for indices in edge_vars_in[low_v_id] for i in indices]
 
-        # Number of edges constraint for each graph copy
-        m.addConstr(quicksum(vars_and_edges[i][0] for i in edge_indices_in_graph_copy) <= max_cycle)        
-
-        # In each graph copy, if any edge is selected then an edge is selected
-        # that leaves the low-numbered vertex in the graph copy
-        # Note: this differs from (9e) in Constantino et al.
-        if eef_alt_symmetry_break:
-            edge_vars_leaving_l = []
-            edge_vars_not_leaving_l = []
+            edge_vars_involving_l = []
+            edge_vars_not_involving_l = []
             for i in edge_indices_in_graph_copy:
                 var, edge, _ = vars_and_edges[i]
-                if edge.src.id == low_v_id:
-                    edge_vars_leaving_l.append(var)
+                if edge.src.id==low_v_id or edge.tgt.id==low_v_id:
+                    edge_vars_involving_l.append(var)
                 else:
-                    edge_vars_not_leaving_l.append(var)
-            m.addConstr(quicksum((max_cycle-1) * var for var in edge_vars_leaving_l) >=
-                        quicksum(edge_vars_not_leaving_l))
-        else:
+                    edge_vars_not_involving_l.append(var)
+
+            vars_leaving_l = [vars_and_edges[j][0] for j in edge_vars_out[low_v_id][low_v_id]]
+            
+
+            # Number of edges constraint for each graph copy
+            m.addConstr(quicksum(edge_vars_not_involving_l) <= max_cycle-2) 
+
+            # In each graph copy, if any edge is selected then an edge is selected
+            # that leaves the low-numbered vertex in the graph copy
+            # Note: this differs from (9e) in Constantino et al.
+            m.addConstr(quicksum(edge_vars_not_involving_l) <=
+                        (max_cycle-2) * quicksum(vars_leaving_l))
+
+    else:
+        for low_v_id in range(v):
+            edge_indices_in_graph_copy = [i for indices in edge_vars_in[low_v_id] for i in indices]
+
+            # Number of edges constraint for each graph copy
+            m.addConstr(quicksum(vars_and_edges[i][0] for i in edge_indices_in_graph_copy) <= max_cycle)        
             # Constraint (9e) from Constantino et al.
             sum_of_edge_vars_leaving_l = quicksum(
                     vars_and_edges[i][0] for i in edge_vars_out[low_v_id][low_v_id])
