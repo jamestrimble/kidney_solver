@@ -104,18 +104,17 @@ class OptSolution(object):
                            new_digraph, self.edge_success_prob)
 
 def optimise(model, cfg):
-    if cfg.relax:
-        model.update()
-        r = model.relax()
-        r.optimize()
-        print "lp_relax_obj_val: {}".format(r.obj_val)
-        print "lp_relax_solver_status: {}".format(r.status)
-
     if cfg.lp_file:
         model.write(cfg.lp_file)
         sys.exit(0)
     else:
         model.optimize()
+        if cfg.relax:
+            model.update()
+            r = model.relax()
+            r.optimize()
+            print "lp_relax_obj_val:", r.obj_val
+            print "lp_relax_solver_status:", r.status
 
 def optimise_relabelled(formulation_fun, cfg):
     """Optimise on a relabelled graph such that vertices are sorted in descending
