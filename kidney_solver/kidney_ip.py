@@ -123,11 +123,12 @@ def optimise_relabelled(formulation_fun, cfg):
     opt_result = formulation_fun(relabelled_cfg)
     return opt_result.relabelled_copy(sorted_vertices, cfg.digraph)
 
-def create_ip_model(time_limit):
+def create_ip_model(time_limit, verbose):
     """Create a Gurobi Model."""
 
     m = Model("kidney-mip")
-    m.params.outputflag = 0
+    if not verbose:
+        m.params.outputflag = 0
     m.params.mipGap = 0
     if time_limit is not None:
         m.params.timelimit = time_limit
@@ -193,7 +194,7 @@ def optimise_uuef(cfg):
     if cfg.edge_success_prob != 1:
         raise ValueError("This formulation does not support failure-aware matching.")
 
-    m = create_ip_model(cfg.timelimit)
+    m = create_ip_model(cfg.timelimit, cfg.verbose)
 
     add_unlimited_vars_and_constraints(cfg.digraph, cfg.ndds, m)
 
@@ -402,7 +403,7 @@ def optimise_hpief_prime(cfg, full_red=False, hpief_2_prime=False):
     if cfg.max_cycle < 3:
         hpief_2_prime = False
 
-    m = create_ip_model(cfg.timelimit)
+    m = create_ip_model(cfg.timelimit, cfg.verbose)
     m.params.method = 2
     m.params.presolve = 0
 
@@ -489,7 +490,7 @@ def optimise_picef(cfg):
 
     cycles = cfg.digraph.find_cycles(cfg.max_cycle)
 
-    m = create_ip_model(cfg.timelimit)
+    m = create_ip_model(cfg.timelimit, cfg.verbose)
     m.params.method = 2
 
     cycle_vars = [m.addVar(vtype=GRB.BINARY) for __ in cycles]
@@ -552,7 +553,7 @@ def optimise_ccf(cfg):
     cycles = cfg.digraph.find_cycles(cfg.max_cycle)
     chains = find_chains(cfg.digraph, cfg.ndds, cfg.max_chain, cfg.edge_success_prob)
         
-    m = create_ip_model(cfg.timelimit)
+    m = create_ip_model(cfg.timelimit, cfg.verbose)
     m.params.method = 2
 
     cycle_vars = [m.addVar(vtype=GRB.BINARY) for __ in cycles]
@@ -734,7 +735,7 @@ def optimise_eef(cfg, full_red=False):
     if cfg.max_chain > 0:
         raise ValueError("The EEF implementation does not support chains.")
 
-    m = create_ip_model(cfg.timelimit)
+    m = create_ip_model(cfg.timelimit, cfg.verbose)
     m.params.method = 2
     m.params.presolve = 0
 
