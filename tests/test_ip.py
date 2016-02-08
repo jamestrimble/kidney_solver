@@ -17,6 +17,7 @@ def test_chains_only_instance():
     fns = [k_ip.optimise_uuef,
             k_ip.optimise_hpief_prime, k_ip.optimise_hpief_2prime,
             k_ip.optimise_hpief_prime_full_red, k_ip.optimise_hpief_2prime_full_red,
+            k_ip.optimise_eef, k_ip.optimise_eef_full_red,
             k_ip.optimise_picef, k_ip.optimise_ccf]
     for max_chain in [0, 1, 2]:
         for fn in fns:
@@ -34,6 +35,8 @@ def test_single_cycle_instance():
             k_ip.optimise_hpief_2prime,
             k_ip.optimise_hpief_prime_full_red,
             k_ip.optimise_hpief_2prime_full_red,
+            k_ip.optimise_eef,
+            k_ip.optimise_eef_full_red,
             k_ip.optimise_picef, k_ip.optimise_ccf]
     for max_chain in [0, 1, 2]:
         for fn in fns:
@@ -61,6 +64,7 @@ def test_preflib_instance_with_zero_chain_cap():
     fns = [ k_ip.optimise_eef, k_ip.optimise_eef_full_red,
             k_ip.optimise_hpief_prime_full_red, k_ip.optimise_hpief_2prime_full_red,
             k_ip.optimise_hpief_prime, k_ip.optimise_hpief_2prime,
+            k_ip.optimise_eef, k_ip.optimise_eef_full_red,
             k_ip.optimise_picef, k_ip.optimise_ccf]
     for fn in fns:
         max_cycle = 4
@@ -103,8 +107,6 @@ def test_weighted_instance():
             opt_result_0 = fns[0](k_ip.OptConfig(d, ndds, max_cycle, max_chain))
             k_utils.check_validity(opt_result_0, d, ndds, max_cycle, max_chain)
             for fn in fns[1:]:
-                if max_chain > 0 and fn in [k_ip.optimise_eef, k_ip.optimise_eef_full_red]:
-                    continue
                 opt_result = fn(k_ip.OptConfig(d, ndds, max_cycle, max_chain))
                 k_utils.check_validity(opt_result, d, ndds, max_cycle, max_chain)
                 print max_cycle, max_chain, opt_result.total_score, \

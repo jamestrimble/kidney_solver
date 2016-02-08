@@ -668,18 +668,14 @@ def add_eef_vars_full_red(max_cycle, digraph, m):
     m.update()
     return vars_and_edges, edge_vars_in, edge_vars_out
 
-def add_eef_vars_and_constraints(max_cycle, digraph, m, full_red, eef_alt_constraints):
+def add_eef_vars_and_constraints(max_cycle, digraph, m, full_red, eef_alt_constraints, vtx_to_in_edges):
     if full_red:
         vars_and_edges, edge_vars_in, edge_vars_out = add_eef_vars_full_red(max_cycle, digraph, m)
     else:
         vars_and_edges, edge_vars_in, edge_vars_out = add_eef_vars_partial_red(max_cycle, digraph, m)
     
-    # For each vertex v, a list of variables corresponding to in-edges to v
-    vtx_to_in_edges = [[] for __ in digraph.vs]
-    vtx_to_out_edges = [[] for __ in digraph.vs] # FIXME: should only be in new version
     for grb_var, edge, low_vtx in vars_and_edges:
         vtx_to_in_edges[edge.tgt.id].append(grb_var)
-        vtx_to_out_edges[edge.src.id].append(grb_var)
         
     # Capacity constraint for vertices
     for l in vtx_to_in_edges:
@@ -753,19 +749,24 @@ def optimise_eef(cfg, full_red=False):
     if cfg.edge_success_prob != 1:
         raise ValueError("This formulation does not support failure-aware matching.")
 
-    if cfg.max_chain > 0:
-        raise ValueError("The EEF implementation does not support chains.")
-
     m = create_ip_model(cfg.timelimit, cfg.verbose)
     m.params.method = 2
     m.params.presolve = 0
 
-    vars_and_edges = add_eef_vars_and_constraints(cfg.max_cycle, cfg.digraph, m, full_red,
-                                                  cfg.eef_alt_constraints)
+    # For each vertex v, a list of variables corresponding to in-edges to v
+    vtx_to_in_edges = [[] for __ in cfg.digraph.vs]
 
-    m.setObjective(
-            quicksum(edge.score * var for var, edge, low_v_id in vars_and_edges),
-            GRB.MAXIMIZE)
+    add_chain_vars_and_constraints(cfg.digraph, cfg.ndds, cfg.max_chain, m, vtx_to_in_edges)
+
+    vars_and_edges = add_eef_vars_and_constraints(cfg.max_cycle, cfg.digraph, m, full_red,
+                                                  cfg.eef_alt_constraints, vtx_to_in_edges)
+
+    obj_expr = quicksum(edge.score * var for var, edge, low_v_id in vars_and_edges)
+    if cfg.max_chain > 0:
+        obj_expr += quicksum(e.score * e.edge_var for ndd in cfg.ndds for e in ndd.edges) 
+        obj_expr += quicksum(e.score * var for e in cfg.digraph.es for var in e.grb_vars)
+
+    m.setObjective(obj_expr, GRB.MAXIMIZE)
     optimise(m, cfg)
 
     cycle_start_vv = []
@@ -779,7 +780,7 @@ def optimise_eef(cfg, full_red=False):
     return OptSolution(ip_model=m,
                        cycles=kidney_utils.selected_edges_to_cycles(
                                     cfg.digraph, cycle_start_vv, cycle_next_vv),
-                       chains=[],
+                       chains=[] if cfg.max_chain==0 else kidney_utils.get_optimal_chains(cfg.digraph, cfg.ndds),
                        digraph=cfg.digraph)
 
 def optimise_eef_full_red(cfg):
