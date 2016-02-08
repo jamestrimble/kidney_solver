@@ -23,16 +23,17 @@ class OptConfig(object):
         ndds
         max_cycle
         max_chain
-        verbose
+        verbose: True if and only if Gurobi output should be writtent to screen and log file
         timelimit
         edge_success_prob
-        eef_alt_constraints
-        lp_file
+        eef_alt_constraints: True if and only if alternative EEF constraints should be used
+        lp_file: The name of a .lp file to write, or None if the file should not be written
+        relax: True if and only if the LP relaxation should be solved also
     """
 
     def __init__(self, digraph, ndds, max_cycle, max_chain, verbose=False,
                  timelimit=None, edge_success_prob=1, eef_alt_constraints=False,
-                 lp_file=None):
+                 lp_file=None, relax=False):
         self.digraph = digraph
         self.ndds = ndds
         self.max_cycle = max_cycle
@@ -42,6 +43,7 @@ class OptConfig(object):
         self.edge_success_prob = edge_success_prob
         self.eef_alt_constraints = eef_alt_constraints
         self.lp_file = lp_file
+        self.relax = relax
 
 class OptSolution(object):
     """An optimal solution for a kidney-exchange problem instance.
@@ -102,6 +104,13 @@ class OptSolution(object):
                            new_digraph, self.edge_success_prob)
 
 def optimise(model, cfg):
+    if cfg.relax:
+        model.update()
+        r = model.relax()
+        r.optimize()
+        print "lp_relax_obj_val: {}".format(r.obj_val)
+        print "lp_relax_solver_status: {}".format(r.status)
+
     if cfg.lp_file:
         model.write(cfg.lp_file)
         sys.exit(0)

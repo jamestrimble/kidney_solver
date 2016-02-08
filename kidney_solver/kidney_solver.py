@@ -65,6 +65,9 @@ def start():
     parser.add_argument("--lp-file", "-l", required=False, default=None,
             metavar='FILE',
             help="Write the IP model to FILE, then exit.")
+    parser.add_argument("--relax", "-x", required=False,
+            action='store_true',
+            help="Solve the LP relaxation also.")
             
     args = parser.parse_args()
     args.formulation = args.formulation.lower()
@@ -84,7 +87,7 @@ def start():
     start_time = time.time()
     cfg = kidney_ip.OptConfig(d, altruists, args.cycle_cap, args.chain_cap, args.verbose,
                               args.timelimit, args.edge_success_prob, args.eef_alt_constraints,
-                              args.lp_file)
+                              args.lp_file, args.relax)
     opt_solution = solve_kep(cfg, args.formulation, args.use_relabelled)
     time_taken = time.time() - start_time
     print "formulation: {}".format(args.formulation)
