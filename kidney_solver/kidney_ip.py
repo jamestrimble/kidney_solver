@@ -1,5 +1,7 @@
 """Solving the kidney-exchange problem using the Gurobi IP solver."""
 
+import copy
+
 from kidney_digraph import *
 from kidney_ndds import *
 import kidney_utils
@@ -24,15 +26,16 @@ class OptConfig(object):
         edge_success_prob
     """
 
-    def __init__(self, digraph, ndds, max_cycle, max_chain, timelimit=None, edge_success_prob=1,
-                 eef_alt_symmetry_break=False):
+    def __init__(self, digraph, ndds, max_cycle, max_chain, verbose=False,
+                 timelimit=None, edge_success_prob=1, eef_alt_constraints=False):
         self.digraph = digraph
         self.ndds = ndds
         self.max_cycle = max_cycle
         self.max_chain = max_chain
+        self.verbose = verbose
         self.timelimit = timelimit
         self.edge_success_prob = edge_success_prob
-        self.eef_alt_symmetry_break = eef_alt_symmetry_break
+        self.eef_alt_constraints = eef_alt_constraints
 
 class OptSolution(object):
     """An optimal solution for a kidney-exchange problem instance.
@@ -113,9 +116,11 @@ def optimise_relabelled(formulation_fun, cfg):
         old_to_new_vtx[v.id] = relabelled_digraph.vs[i]
 
     relabelled_ndds = create_relabelled_ndds(cfg.ndds, old_to_new_vtx)
-    opt_result = formulation_fun(OptConfig(relabelled_digraph, relabelled_ndds, cfg.max_cycle,
-                                           cfg.max_chain, cfg.timelimit, cfg.edge_success_prob,
-                                           cfg.eef_alt_symmetry_break))
+    relabelled_cfg = copy.copy(cfg)
+    relabelled_cfg.digraph = relabelled_digraph
+    relabelled_cfg.ndds = relabelled_ndds
+
+    opt_result = formulation_fun(relabelled_cfg)
     return opt_result.relabelled_copy(sorted_vertices, cfg.digraph)
 
 def create_ip_model(time_limit):
@@ -641,7 +646,7 @@ def add_eef_vars_full_red(max_cycle, digraph, m):
     m.update()
     return vars_and_edges, edge_vars_in, edge_vars_out
 
-def add_eef_vars_and_constraints(max_cycle, digraph, m, full_red, eef_alt_symmetry_break):
+def add_eef_vars_and_constraints(max_cycle, digraph, m, full_red, eef_alt_constraints):
     if full_red:
         vars_and_edges, edge_vars_in, edge_vars_out = add_eef_vars_full_red(max_cycle, digraph, m)
     else:
@@ -667,7 +672,7 @@ def add_eef_vars_and_constraints(max_cycle, digraph, m, full_red, eef_alt_symmet
             if len(in_vars) > 0 or len(out_vars) > 0:
                 m.addConstr(quicksum(in_vars) == quicksum(out_vars))
 
-    if eef_alt_symmetry_break:
+    if eef_alt_constraints:
         for low_v_id in range(v):
             edge_indices_in_graph_copy = [i for indices in edge_vars_in[low_v_id] for i in indices]
 
@@ -697,6 +702,7 @@ def add_eef_vars_and_constraints(max_cycle, digraph, m, full_red, eef_alt_symmet
 
             # Number of edges constraint for each graph copy
             m.addConstr(quicksum(vars_and_edges[i][0] for i in edge_indices_in_graph_copy) <= max_cycle)        
+
             # Constraint (9e) from Constantino et al.
             sum_of_edge_vars_leaving_l = quicksum(
                     vars_and_edges[i][0] for i in edge_vars_out[low_v_id][low_v_id])
@@ -733,7 +739,7 @@ def optimise_eef(cfg, full_red=False):
     m.params.presolve = 0
 
     vars_and_edges = add_eef_vars_and_constraints(cfg.max_cycle, cfg.digraph, m, full_red,
-                                                  cfg.eef_alt_symmetry_break)
+                                                  cfg.eef_alt_constraints)
 
     m.setObjective(
             quicksum(edge.score * var for var, edge, low_v_id in vars_and_edges),

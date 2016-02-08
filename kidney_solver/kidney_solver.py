@@ -11,8 +11,7 @@ import kidney_ip
 import kidney_utils
 import kidney_ndds
 
-def solve_kep(digraph, ndds, max_cycle, max_chain, formulation, edge_success_prob, timelimit,
-              eef_alt_symmetry_break, use_relabelled=True):
+def solve_kep(cfg, formulation, use_relabelled=True):
 
     formulations = {
         "uef":  ("Uncapped edge formulation", kidney_ip.optimise_uuef),
@@ -29,13 +28,11 @@ def solve_kep(digraph, ndds, max_cycle, max_chain, formulation, edge_success_pro
     
     if formulation in formulations:
         formulation_name, formulation_fun = formulations[formulation]
-        cfg = kidney_ip.OptConfig(digraph, ndds, max_cycle, max_chain, timelimit, edge_success_prob,
-                                  eef_alt_symmetry_break)
         if use_relabelled:
             opt_result = kidney_ip.optimise_relabelled(formulation_fun, cfg)
         else:
             opt_result = formulation_fun(cfg)
-        kidney_utils.check_validity(opt_result, digraph, ndds, max_cycle, max_chain)
+        kidney_utils.check_validity(opt_result, cfg.digraph, cfg.ndds, cfg.max_cycle, cfg.max_chain)
         opt_result.formulation_name = formulation_name
         return opt_result
     else:
@@ -52,12 +49,15 @@ def start():
     parser.add_argument("--use-relabelled", "-r", required=False,
             action="store_true",
             help="Relabel vertices in descending order of in-deg + out-deg")
-    parser.add_argument("--eef-alt-symmetry-break", "-s", required=False,
+    parser.add_argument("--eef-alt-constraints", "-e", required=False,
             action="store_true",
-            help="Use an alternative EEF symmetry-breaking constraint (ignored for other formulations)")
+            help="Use slightly-modified EEF constraints (ignored for other formulations)")
     parser.add_argument("--timelimit", "-t", required=False, default=None,
             type=float,
             help="IP solver time limit in seconds (default: no time limit)")
+    parser.add_argument("--verbose", "-v", required=False,
+            action="store_true",
+            help="Log Gurobi output to screen and log file")
     parser.add_argument("--edge-success-prob", "-p", required=False,
             type=float, default=1.0,
             help="Edge success probability, for failure-aware matching. " +
@@ -79,9 +79,9 @@ def start():
         altruists = []
         
     start_time = time.time()
-    opt_solution = solve_kep(d, altruists, args.cycle_cap, args.chain_cap,
-                             args.formulation, args.edge_success_prob, args.timelimit,
-                             args.eef_alt_symmetry_break, args.use_relabelled)
+    cfg = kidney_ip.OptConfig(d, altruists, args.cycle_cap, args.chain_cap, args.verbose,
+                              args.timelimit, args.edge_success_prob, args.eef_alt_constraints)
+    opt_solution = solve_kep(cfg, args.formulation, args.use_relabelled)
     time_taken = time.time() - start_time
     print "formulation: {}".format(args.formulation)
     print "formulation_name: {}".format(opt_solution.formulation_name)
