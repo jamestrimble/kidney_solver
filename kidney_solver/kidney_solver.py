@@ -62,6 +62,9 @@ def start():
             type=float, default=1.0,
             help="Edge success probability, for failure-aware matching. " +
                  "This can only be used with PICEF and cycle formulation. (default: 1)")
+    parser.add_argument("--lp-file", "-l", required=False, default=None,
+            metavar='FILE',
+            help="Write the IP model to FILE, then exit.")
             
     args = parser.parse_args()
     args.formulation = args.formulation.lower()
@@ -80,7 +83,8 @@ def start():
         
     start_time = time.time()
     cfg = kidney_ip.OptConfig(d, altruists, args.cycle_cap, args.chain_cap, args.verbose,
-                              args.timelimit, args.edge_success_prob, args.eef_alt_constraints)
+                              args.timelimit, args.edge_success_prob, args.eef_alt_constraints,
+                              args.lp_file)
     opt_solution = solve_kep(cfg, args.formulation, args.use_relabelled)
     time_taken = time.time() - start_time
     print "formulation: {}".format(args.formulation)

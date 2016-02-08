@@ -1,6 +1,7 @@
 """Solving the kidney-exchange problem using the Gurobi IP solver."""
 
 import copy
+import sys
 
 from kidney_digraph import *
 from kidney_ndds import *
@@ -22,12 +23,16 @@ class OptConfig(object):
         ndds
         max_cycle
         max_chain
+        verbose
         timelimit
         edge_success_prob
+        eef_alt_constraints
+        lp_file
     """
 
     def __init__(self, digraph, ndds, max_cycle, max_chain, verbose=False,
-                 timelimit=None, edge_success_prob=1, eef_alt_constraints=False):
+                 timelimit=None, edge_success_prob=1, eef_alt_constraints=False,
+                 lp_file=None):
         self.digraph = digraph
         self.ndds = ndds
         self.max_cycle = max_cycle
@@ -36,6 +41,7 @@ class OptConfig(object):
         self.timelimit = timelimit
         self.edge_success_prob = edge_success_prob
         self.eef_alt_constraints = eef_alt_constraints
+        self.lp_file = lp_file
 
 class OptSolution(object):
     """An optimal solution for a kidney-exchange problem instance.
@@ -94,6 +100,13 @@ class OptSolution(object):
                              for c in self.chains]
         return OptSolution(self.ip_model, relabelled_cycles, relabelled_chains,
                            new_digraph, self.edge_success_prob)
+
+def optimise(model, cfg):
+    if cfg.lp_file:
+        model.write(cfg.lp_file)
+        sys.exit(0)
+    else:
+        model.optimize()
 
 def optimise_relabelled(formulation_fun, cfg):
     """Optimise on a relabelled graph such that vertices are sorted in descending
@@ -202,7 +215,7 @@ def optimise_uuef(cfg):
                  quicksum(e.score * var for e in cfg.digraph.es for var in e.grb_vars) )
    
     m.setObjective(obj_expr, GRB.MAXIMIZE)
-    m.optimize()
+    optimise(m, cfg)
 
     # Try all possible cycle start positions
     cycle_start_vv = range(cfg.digraph.n)
@@ -431,7 +444,7 @@ def optimise_hpief_prime(cfg, full_red=False, hpief_2_prime=False):
         obj_expr += quicksum(e.score * var for e in cfg.digraph.es for var in e.grb_vars)
     
     m.setObjective(obj_expr, GRB.MAXIMIZE)
-    m.optimize()
+    optimise(m, cfg)
 
     cycle_start_vv = []
     cycle_next_vv = {}
@@ -525,7 +538,7 @@ def optimise_picef(cfg):
                             for e in cfg.digraph.es for var, pos in zip(e.grb_vars, e.grb_var_positions)))
 
     m.setObjective(obj_expr, GRB.MAXIMIZE)
-    m.optimize()
+    optimise(m, cfg)
 
     return OptSolution(ip_model=m,
                        cycles=[c for c, v in zip(cycles, cycle_vars) if v.x > 0.5],
@@ -582,7 +595,7 @@ def optimise_ccf(cfg):
                 quicksum(c.score * var for (c, var) in zip(chains, chain_vars)))
         
     m.setObjective(obj_expr, GRB.MAXIMIZE)
-    m.optimize()
+    optimise(m, cfg)
 
     return OptSolution(ip_model=m,
                        cycles=[c for c, v in zip(cycles, cycle_vars) if v.x > 0.5],
@@ -745,7 +758,7 @@ def optimise_eef(cfg, full_red=False):
     m.setObjective(
             quicksum(edge.score * var for var, edge, low_v_id in vars_and_edges),
             GRB.MAXIMIZE)
-    m.optimize()
+    optimise(m, cfg)
 
     cycle_start_vv = []
     cycle_next_vv = {}
