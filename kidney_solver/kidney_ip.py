@@ -105,6 +105,7 @@ class OptSolution(object):
 
 def optimise(model, cfg):
     if cfg.lp_file:
+        model.update()
         model.write(cfg.lp_file)
         sys.exit(0)
     else:
