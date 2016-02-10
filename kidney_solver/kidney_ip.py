@@ -108,14 +108,15 @@ def optimise(model, cfg):
         model.update()
         model.write(cfg.lp_file)
         sys.exit(0)
+    elif cfg.relax:
+        model.update()
+        r = model.relax()
+        r.optimize()
+        print "lp_relax_obj_val:", r.obj_val
+        print "lp_relax_solver_status:", r.status
+        sys.exit(0)
     else:
         model.optimize()
-        if cfg.relax:
-            model.update()
-            r = model.relax()
-            r.optimize()
-            print "lp_relax_obj_val:", r.obj_val
-            print "lp_relax_solver_status:", r.status
 
 def optimise_relabelled(formulation_fun, cfg):
     """Optimise on a relabelled graph such that vertices are sorted in descending
