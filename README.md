@@ -8,6 +8,15 @@ kidney\_solver is a program for the _kidney-exchange problem_, using Python 2 an
 - [Gurobi](http://www.gurobi.com)
 - Nose, for the tests. Run ``nosetests`` from the base directory.
 
+
+## Sources of IP formulations
+
+- Extended edge formulation: Miguel Constantino, Xenia Klimentova, Ana Viana, Abdur Rais, [New insights on integer-programming models for the kidney exchange problem](http://www.sciencedirect.com/science/article/pii/S0377221713004244), European Journal of Operational Research, Volume 231, Issue 1, 16 November 2013, Pages 57-68.
+- PICEF and HPIEF: Forthcoming work by John Dickerson, David Manlove, Benjamin Plaut, Tuomas Sandholm, and James Trimble.
+- Hybrid extended edge formulation, using PICEF for chains: Xenia Klimentova.
+- Cycle formulation: Roth, Alvin E., Tayfun Sönmez, and M. Utku Ünver. 2007. [Efficient Kidney Exchange: Coincidence of Wants in Markets with Compatibility-Based Preferences.](https://www.aeaweb.org/articles.php?doi=10.1257/aer.97.3.828), American Economic Review, 97(3): 828-851 and David J. Abraham, Avrim Blum, and Tuomas Sandholm, [Clearing Algorithms for Barter Exchange Markets:
+Enabling Nationwide Kidney Exchanges](http://www.cs.cmu.edu/~dabraham/papers/abs07.pdf), in Proceedings of ACM-EC 2007: the Eighth ACM Conference on Electronic Commerce.
+
 ## Usage
 
 The program reads an instance from standard input, and writes the result to standard output. If no non-directed donors (NDDs) are used, the input format is the `.input` format. The example in the `example_data` directory has 64 donor-patient pairs numbered 0, ..., 63, and has 1025 edges. The rows representing edges are in _source target weight_ format. The final row of the input contains -1 three times.
