@@ -67,7 +67,7 @@ def start():
             help="Write the IP model to FILE, then exit.")
     parser.add_argument("--relax", "-x", required=False,
             action='store_true',
-            help="Solve the LP relaxation also.")
+            help="Solve the LP relaxation.")
             
     args = parser.parse_args()
     args.formulation = args.formulation.lower()
