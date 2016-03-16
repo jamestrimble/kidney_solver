@@ -1,48 +1,17 @@
 import sys
-
-class Edge(object):
-    def __init__(self, src, tgt, weight):
-        self.src = src
-        self.tgt = tgt
-        self.weight = weight
+import instance_reader
 
 if len(sys.argv) > 1 and sys.argv[1] in ["-h", "--help"]:
     print "Convert concatenated .input and .ndds format from standard input to CMU .input format."
 else:
     lines = sys.stdin.readlines()
 
-    n_pairs, pair_edge_count = [int(x) for x in lines[0].split()]
-    lines = lines[1:]
-
-    pair_edges = []
-    for line in lines[:pair_edge_count]:
-        src, tgt, weight = line.split()
-        pair_edges.append(Edge(int(src), int(tgt), float(weight)))
-    lines = lines[pair_edge_count:]
-
-    assert lines[0].split()[0] == "-1"
-    lines = lines[1:]
-
-    if len(lines) == 0:
-        n_ndds = 0
-        ndd_edge_count = 0
-    else:
-        n_ndds, ndd_edge_count = [int(x) for x in lines[0].split()]
-        lines = lines[1:]
-
-        ndd_edges = []
-        for line in lines[:ndd_edge_count]:
-            src, tgt, weight = line.split()
-            ndd_edges.append(Edge(int(src) + n_pairs, int(tgt), float(weight)))
-        lines = lines[ndd_edge_count:]
-
-    assert len(lines) == 1
-    assert lines[0].split()[0] == "-1"
+    n_pairs, n_ndds, pair_edges, ndd_edges = instance_reader.read_instance(lines)
 
     dummy_edges = []
     for i in range(n_pairs):
         for j in range(n_pairs, n_pairs+n_ndds):
-            dummy_edges.append(Edge(i, j, 0))
+            dummy_edges.append(instance_reader.Edge(i, j, 0))
 
     all_edges = pair_edges + ndd_edges + dummy_edges
 
