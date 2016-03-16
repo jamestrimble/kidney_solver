@@ -6,6 +6,8 @@ if len(sys.argv) > 1 and sys.argv[1] in ["-h", "--help"]:
     print "to the matrix TSV format used by Kristiaan Glorie." 
     print
     print "Required parameters: cycle_cap chain_cap"
+    print "Note that cycle_cap is number of *vertices* in longest permitted cycle."
+
 else:
     cycle_cap = sys.argv[1]
     chain_cap = sys.argv[2]
