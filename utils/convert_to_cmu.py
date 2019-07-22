@@ -2,7 +2,7 @@ import sys
 import instance_reader
 
 if len(sys.argv) > 1 and sys.argv[1] in ["-h", "--help"]:
-    print "Convert concatenated .input and .ndds format from standard input to CMU .input format."
+    print("Convert concatenated .input and .ndds format from standard input to CMU .input format.")
 else:
     lines = sys.stdin.readlines()
 
@@ -15,11 +15,11 @@ else:
 
     all_edges = pair_edges + ndd_edges + dummy_edges
 
-    print "{}\t{}".format(n_pairs + n_ndds, len(all_edges))
+    print("{}\t{}".format(n_pairs + n_ndds, len(all_edges)))
     
     for edge in all_edges:
         # Print source, target, weight, (1 if target is an NDD else 0)
-        print "{}\t{}\t{}\t{}\t0".format(edge.src, edge.tgt, edge.weight,
-                                        1 if edge.tgt >= n_pairs else 0)
+        print("{}\t{}\t{}\t{}\t0".format(edge.src, edge.tgt, edge.weight,
+                                        1 if edge.tgt >= n_pairs else 0))
 
-    print "-1\t-1\t-1"
+    print("-1\t-1\t-1")

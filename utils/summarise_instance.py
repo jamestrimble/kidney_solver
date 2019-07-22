@@ -7,10 +7,10 @@ import sys
 def summarise(lines):
     count_lines = [line.split() for line in lines if len(line.split())==2]
     if len(count_lines) > 2:
-        print >>sys.stderr, "Error: two many lines with two tokens"
+        print("Error: two many lines with two tokens", file=sys.stderr)
         sys.exit(1)
     elif len(count_lines) == 0:
-        print >>sys.stderr, "Error: not enough lines with two tokens"
+        print("Error: not enough lines with two tokens", file=sys.stderr)
         sys.exit(1)
     elif len(count_lines) == 2:
         n_ndds, n_arcs_from_ndd = (int(x) for x in count_lines[1])
@@ -19,11 +19,11 @@ def summarise(lines):
 
     n_pairs, n_arcs_between_pairs = (int(x) for x in count_lines[0])
 
-    print "n_pairs,n_arcs_between_pairs,n_ndds,n_arcs_from_ndd,n_vertices,n_arcs"
-    print "{},{},{},{},{},{}".format(n_pairs, n_arcs_between_pairs,
+    print("n_pairs,n_arcs_between_pairs,n_ndds,n_arcs_from_ndd,n_vertices,n_arcs")
+    print("{},{},{},{},{},{}".format(n_pairs, n_arcs_between_pairs,
             n_ndds, n_arcs_from_ndd,
             n_pairs + n_ndds,
-            n_arcs_between_pairs + n_arcs_from_ndd)
+            n_arcs_between_pairs + n_arcs_from_ndd))
 
 if __name__=="__main__":
     summarise(sys.stdin.readlines())

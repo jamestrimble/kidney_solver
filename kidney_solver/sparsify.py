@@ -6,8 +6,8 @@ import argparse
 import random
 import sys
 
-import kidney_digraph
-import kidney_ndds
+from . import kidney_digraph
+from . import kidney_ndds
 
 def write_edges(n, edges):
     """Writes an instance in .input or .ndds format
@@ -17,11 +17,11 @@ def write_edges(n, edges):
         edges: The edges in (src_as_int, tgt_as_int, weight_as_float) format
     """
 
-    print "{}\t{}".format(n, len(edges))
+    print(("{}\t{}".format(n, len(edges))))
     for edge in edges:
-        print "{}\t{}\t{}".format(edge[0], edge[1], edge[2])
+        print(("{}\t{}\t{}".format(edge[0], edge[1], edge[2])))
 
-    print "-1\t-1\t-1"
+    print("-1\t-1\t-1")
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(

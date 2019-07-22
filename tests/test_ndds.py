@@ -2,7 +2,7 @@ import nose.tools
 
 from kidney_solver.kidney_digraph import *
 import kidney_solver.kidney_ndds as k_ndds
-from test_ip import read_with_ndds
+from .test_ip import read_with_ndds
 
 @nose.tools.raises(KidneyReadException)
 def test_raises_exception_on_duplicate_edge():

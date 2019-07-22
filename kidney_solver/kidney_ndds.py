@@ -7,7 +7,7 @@ each of these edges points towards a vertex (which represents a donor-patient pa
 in the directed graph.
 """
 
-from kidney_digraph import KidneyReadException
+from .kidney_digraph import KidneyReadException
 
 class Ndd:
     """A non-directed donor"""

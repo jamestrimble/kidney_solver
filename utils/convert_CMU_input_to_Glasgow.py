@@ -51,7 +51,7 @@ def convert_and_write(input_file, output_base):
             if is_dummy:
                 # Track who is an NDD
                 dummy_edge_ct += 1
-                if tgt_id not in ndd_id_map.keys():
+                if tgt_id not in list(ndd_id_map.keys()):
                     new_ndd_id = len(ndd_id_map)
                     ndd_id_map[tgt_id] = new_ndd_id
             else:
@@ -67,7 +67,7 @@ def convert_and_write(input_file, output_base):
 
     # Finish off the ID remapping for the pairs; NDDs were remapped above
     for vert_id in seen_vert_ids:
-        if vert_id not in ndd_id_map.keys():
+        if vert_id not in list(ndd_id_map.keys()):
             new_pair_id = len(pair_id_map)
             pair_id_map[vert_id] = new_pair_id
 
@@ -78,7 +78,7 @@ def convert_and_write(input_file, output_base):
     ndd_outgoing_edge_ct = 0
     pairs_outgoing_edge_ct = 0
     for src, tgt, weight in real_edge_list:
-        if src in ndd_id_map.keys():
+        if src in list(ndd_id_map.keys()):
             ndd_outgoing_edge_ct += 1
         else:
             pairs_outgoing_edge_ct += 1
@@ -101,12 +101,12 @@ def convert_and_write(input_file, output_base):
 
         # Now write the edges, with translated vertex IDs, to the files
         for src, tgt, weight in real_edge_list:
-            if src in ndd_id_map.keys():
-                assert tgt not in ndd_id_map.keys()  # can't have NDD->NDD
+            if src in list(ndd_id_map.keys()):
+                assert tgt not in list(ndd_id_map.keys())  # can't have NDD->NDD
                 nwriter.writerow([ndd_id_map[src], pair_id_map[tgt], weight])
                 ndds_outgoing_edges_written+=1
             else:
-                assert tgt not in ndd_id_map.keys()  # can't have pair->NDD
+                assert tgt not in list(ndd_id_map.keys())  # can't have pair->NDD
                 pwriter.writerow([pair_id_map[src], pair_id_map[tgt], weight])
                 pairs_outgoing_edges_written+=1
  
