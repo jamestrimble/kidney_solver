@@ -1,10 +1,10 @@
 # kidney\_solver
 
-kidney\_solver is a program for the _kidney-exchange problem_, using Python 2 and the Gurobi IP solver.
+kidney\_solver is a program for the _kidney-exchange problem_, using Python 3 and the Gurobi IP solver.
 
 ## Prerequisites
 
-- Python 2
+- Python 3
 - [Gurobi](http://www.gurobi.com)
 - Nose, for the tests. Run ``nosetests`` from the base directory.
 
