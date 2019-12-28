@@ -6,8 +6,8 @@ instance, up to given cycle and chain caps.
 import argparse
 import sys
 
-import kidney_digraph
-import kidney_ndds
+from . import kidney_digraph
+from . import kidney_ndds
 
 def count_cycles(digraph, max_length):
     """Find cycles of length up to max_length in the digraph.
@@ -95,14 +95,14 @@ def start():
         
     cycle_counts_by_size = count_cycles(d, args.cycle_cap)
     chain_counts_by_size = count_chains(d, altruists, args.chain_cap)
-    print "cycles: {}".format(sum(cycle_counts_by_size))
-    print "chains: {}".format(sum(chain_counts_by_size))
-    print "cycles by length:"
+    print(("cycles: {}".format(sum(cycle_counts_by_size))))
+    print(("chains: {}".format(sum(chain_counts_by_size))))
+    print("cycles by length:")
     for i in range(2, args.cycle_cap+1):
-        print "{}\t{}".format(i, cycle_counts_by_size[i])
-    print "chains by length:"
+        print(("{}\t{}".format(i, cycle_counts_by_size[i])))
+    print("chains by length:")
     for i in range(1, args.chain_cap+1):
-        print "{}\t{}".format(i, chain_counts_by_size[i])
+        print(("{}\t{}".format(i, chain_counts_by_size[i])))
 
 if __name__=="__main__":
     start()

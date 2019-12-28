@@ -71,7 +71,7 @@ def test_preflib_instance_with_zero_chain_cap():
         max_chain = 0
         opt_result = fn(k_ip.OptConfig(d, ndds, max_cycle, max_chain))
         k_utils.check_validity(opt_result, d, ndds, max_cycle, max_chain)
-        print fn
+        print(fn)
         assert opt_result.total_score == 39 
 
 def test_failure_aware():
@@ -109,8 +109,8 @@ def test_weighted_instance():
             for fn in fns[1:]:
                 opt_result = fn(k_ip.OptConfig(d, ndds, max_cycle, max_chain))
                 k_utils.check_validity(opt_result, d, ndds, max_cycle, max_chain)
-                print max_cycle, max_chain, opt_result.total_score, \
-                        opt_result.ip_model.obj_val, opt_result_0.total_score, fn
+                print(max_cycle, max_chain, opt_result.total_score, \
+                        opt_result.ip_model.obj_val, opt_result_0.total_score, fn)
                 assert abs(opt_result.total_score - opt_result_0.total_score) < EPS
 
 def test_weighted_instance_failure_aware():
@@ -140,8 +140,8 @@ def test_relabelled_solve():
     for max_cycle in [0, 3]:
         for max_chain in [0, 5]:
             opt_result_0 = k_ip.optimise_picef(k_ip.OptConfig(d, ndds, max_cycle, max_chain))
-            print opt_result_0.total_score
+            print(opt_result_0.total_score)
             opt_result = k_ip.optimise_relabelled(
                     k_ip.optimise_picef, k_ip.OptConfig(d, ndds, max_cycle, max_chain))
-            print "   ", opt_result.total_score
+            print("   ", opt_result.total_score)
             assert abs(opt_result.total_score - opt_result_0.total_score) < EPS

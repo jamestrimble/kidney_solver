@@ -2,11 +2,11 @@ import sys
 import instance_reader
 
 if len(sys.argv) > 1 and sys.argv[1] in ["-h", "--help"]:
-    print "Convert concatenated .input and .ndds format from standard input"
-    print "to the matrix TSV format used by Kristiaan Glorie." 
-    print
-    print "Required parameters: cycle_cap chain_cap"
-    print "Note that cycle_cap is number of *vertices* in longest permitted cycle."
+    print("Convert concatenated .input and .ndds format from standard input")
+    print("to the matrix TSV format used by Kristiaan Glorie.") 
+    print()
+    print("Required parameters: cycle_cap chain_cap")
+    print("Note that cycle_cap is number of *vertices* in longest permitted cycle.")
 
 else:
     cycle_cap = sys.argv[1]
@@ -28,7 +28,7 @@ else:
     for edge in all_edges:
         adj_mat[edge.src][edge.tgt] = 1
 
-    print cycle_cap + "\t" + chain_cap
+    print(cycle_cap + "\t" + chain_cap)
     for i, row in enumerate(adj_mat):
-        print "\t".join(str(x) for x in row) + "\t" + \
-                ("P" if i < n_pairs else "A")
+        print("\t".join(str(x) for x in row) + "\t" + \
+                ("P" if i < n_pairs else "A"))

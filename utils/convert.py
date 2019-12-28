@@ -4,7 +4,7 @@ class WmdException(Exception):
     pass
 
 if len(sys.argv) > 1 and sys.argv[1] in ["-h", "--help"]:
-    print "Convert .wmd from standard input to combined .input and .ndds format."
+    print("Convert .wmd from standard input to combined .input and .ndds format.")
 else:
     n, m = [int(x) for x in sys.stdin.readline().split(",")]
 
@@ -34,11 +34,11 @@ else:
 
     def write(n_agents, edges):
         n_edges = len([e for l in edges for e in l])
-        print "{}\t{}".format(n_agents, n_edges)
+        print("{}\t{}".format(n_agents, n_edges))
         for i in range(n_agents):
             for edge in edges[i]:
-                print "{}\t{}\t{}".format(i, edge[0], edge[1])
-        print "-1\t-1\t-1"
+                print("{}\t{}\t{}".format(i, edge[0], edge[1]))
+        print("-1\t-1\t-1")
 
     write(n_pairs, pair_edges)
     write(n_ndds, ndd_edges)

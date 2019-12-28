@@ -6,10 +6,10 @@ import argparse
 import time
 import sys
 
-import kidney_digraph
-import kidney_ip
-import kidney_utils
-import kidney_ndds
+from . import kidney_digraph
+from . import kidney_ip
+from . import kidney_utils
+from . import kidney_ndds
 
 def solve_kep(cfg, formulation, use_relabelled=True):
 
@@ -90,19 +90,19 @@ def start():
                               args.lp_file, args.relax)
     opt_solution = solve_kep(cfg, args.formulation, args.use_relabelled)
     time_taken = time.time() - start_time
-    print "formulation: {}".format(args.formulation)
-    print "formulation_name: {}".format(opt_solution.formulation_name)
-    print "using_relabelled: {}".format(args.use_relabelled)
-    print "cycle_cap: {}".format(args.cycle_cap)
-    print "chain_cap: {}".format(args.chain_cap)
-    print "edge_success_prob: {}".format(args.edge_success_prob)
-    print "ip_time_limit: {}".format(args.timelimit)
-    print "ip_vars: {}".format(opt_solution.ip_model.numVars)
-    print "ip_constrs: {}".format(opt_solution.ip_model.numConstrs)
-    print "total_time: {}".format(time_taken)
-    print "ip_solve_time: {}".format(opt_solution.ip_model.runtime)
-    print "solver_status: {}".format(opt_solution.ip_model.status)
-    print "total_score: {}".format(opt_solution.total_score)
+    print(("formulation: {}".format(args.formulation)))
+    print(("formulation_name: {}".format(opt_solution.formulation_name)))
+    print(("using_relabelled: {}".format(args.use_relabelled)))
+    print(("cycle_cap: {}".format(args.cycle_cap)))
+    print(("chain_cap: {}".format(args.chain_cap)))
+    print(("edge_success_prob: {}".format(args.edge_success_prob)))
+    print(("ip_time_limit: {}".format(args.timelimit)))
+    print(("ip_vars: {}".format(opt_solution.ip_model.numVars)))
+    print(("ip_constrs: {}".format(opt_solution.ip_model.numConstrs)))
+    print(("total_time: {}".format(time_taken)))
+    print(("ip_solve_time: {}".format(opt_solution.ip_model.runtime)))
+    print(("solver_status: {}".format(opt_solution.ip_model.status)))
+    print(("total_score: {}".format(opt_solution.total_score)))
     opt_solution.display()
 
 if __name__=="__main__":

@@ -3,9 +3,9 @@
 import copy
 import sys
 
-from kidney_digraph import *
-from kidney_ndds import *
-import kidney_utils
+from .kidney_digraph import *
+from .kidney_ndds import *
+from . import kidney_utils
 
 from gurobipy import *
 
@@ -69,9 +69,9 @@ class OptSolution(object):
     def display(self):
         """Print the optimal cycles and chains to standard output."""
 
-        print "cycle_count: {}".format(len(self.cycles))
-        print "chain_count: {}".format(len(self.chains))
-        print "cycles:"
+        print(("cycle_count: {}".format(len(self.cycles))))
+        print(("chain_count: {}".format(len(self.chains))))
+        print("cycles:")
         # cs is a list of cycles, with each cycle represented as a list of vertex IDs
         cs = [[v.id for v in c] for c in self.cycles]
         # Put the lowest-indexed vertex at the start of each cycle
@@ -81,10 +81,10 @@ class OptSolution(object):
         # Sort the cycles
         cs.sort()
         for c in cs:
-            print "\t".join(str(v_id) for v_id in c)
-        print "chains:"
+            print(("\t".join(str(v_id) for v_id in c)))
+        print("chains:")
         for c in self.chains:
-            print str(c.ndd_index) + "\t" + "\t".join(str(v) for v in c.vtx_indices)
+            print((str(c.ndd_index) + "\t" + "\t".join(str(v) for v in c.vtx_indices)))
 
     def relabelled_copy(self, old_to_new_vertices, new_digraph):
         """Create a copy of the solution with vertices relabelled.
@@ -112,8 +112,8 @@ def optimise(model, cfg):
         model.update()
         r = model.relax()
         r.optimize()
-        print "lp_relax_obj_val:", r.obj_val
-        print "lp_relax_solver_status:", r.status
+        print(("lp_relax_obj_val:", r.obj_val))
+        print(("lp_relax_solver_status:", r.status))
         sys.exit(0)
     else:
         model.optimize()
@@ -228,7 +228,7 @@ def optimise_uuef(cfg):
     optimise(m, cfg)
 
     # Try all possible cycle start positions
-    cycle_start_vv = range(cfg.digraph.n)
+    cycle_start_vv = list(range(cfg.digraph.n))
 
     cycle_next_vv = {}
     for e in cfg.digraph.es:
@@ -337,7 +337,7 @@ def add_hpief_prime_vars_partial_red(max_cycle, digraph, m, hpief_2_prime=False)
         for v1 in digraph.vs[low_vtx+1:]:
             for e in v1.edges:
                 if e.tgt.id >=low_vtx:
-                    for pos in xrange(1, max_pos + 1):
+                    for pos in range(1, max_pos + 1):
                         if (shortest_path_from_lv[e.src.id] <= pos and
                                     shortest_path_to_lv[e.tgt.id] < max_cycle - pos):
                             new_var = m.addVar(vtype=GRB.BINARY)
