@@ -44,13 +44,13 @@ If the cycle formulation or PICEF is used, failure-aware matching with uniform e
 *Example 1:* .wmd format input
 
 ```
-python utils/convert.py < example_data/MD-00001-00000100.wmd | python kidney_solver/kidney_solver.py 3 3 picef
+python3 -m utils.convert < example_data/MD-00001-00000100.wmd | python3 -m kidney_solver.kidney_solver 3 3 picef
 ```
 
 *Example 2:* input in .input and .ndds format
 
 ```
-cat example_data/MD-00001-00000100.input example_data/MD-00001-00000100.ndds | python kidney_solver/kidney_solver.py 3 3 picef
+cat example_data/MD-00001-00000100.input example_data/MD-00001-00000100.ndds | python3 -m kidney_solver.kidney_solver 3 3 picef
 ```
 
 ## Output
@@ -62,7 +62,7 @@ The output should be mostly self-explanatory. Each row for the `cycles` listing 
 A Python utility for counting cycles and chains in an instance is also included. This reads from standard input and takes the cycle and chain caps as command-line arguments. Example usage:
 
 ```
-cat example_data/MD-00001-00000100.input example_data/MD-00001-00000100.ndds | python kidney_solver/count_cycles_and_chains.py 3 3
+cat example_data/MD-00001-00000100.input example_data/MD-00001-00000100.ndds | python3 -m kidney_solver.count_cycles_and_chains 3 3
 ```
 
 Note that this will probably run quite a bit quicker if you use Pypy rather than CPython.
@@ -72,7 +72,7 @@ Note that this will probably run quite a bit quicker if you use Pypy rather than
 The `sparsify.py` instance can be used to delete each edge from an instance with some given probability. The program reads from standard input in the `.input` + `.ndds` format, and writes to standard output in the same format. The probability that each edge will be _kept_ is a command-line argument.
 
 ```
-cat example_data/MD-00001-00000100.input example_data/MD-00001-00000100.ndds | python kidney_solver/sparsify.py .05
+cat example_data/MD-00001-00000100.input example_data/MD-00001-00000100.ndds | python3 -m kidney_solver.sparsify .05
 ```
 
 ## Utilities to randomise edge weights
