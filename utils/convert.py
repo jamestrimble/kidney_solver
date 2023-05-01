@@ -1,3 +1,9 @@
+# This script is for converting from the PrefLib .wmd format.
+# Caution: it may not be robust to small changes in the file format.
+
+# PrefLib seems to have modified the files to a slightly different format in 2022,
+# so I've tried to modify the script to accept either the old or the new format.
+
 import sys
 
 class WmdException(Exception):
@@ -6,10 +12,22 @@ class WmdException(Exception):
 if len(sys.argv) > 1 and sys.argv[1] in ["-h", "--help"]:
     print("Convert .wmd from standard input to combined .input and .ndds format.")
 else:
-    n, m = [int(x) for x in sys.stdin.readline().split(",")]
+    first_line = sys.stdin.readline()
+    new_file_format = first_line.startswith('#')
 
     n_pairs = 0
     n_ndds = 0
+
+    if new_file_format:
+        while True:
+            line = sys.stdin.readline()
+            if "# NUMBER ALTERNATIVES" in line:
+                n = int(line.split()[3])
+            if "# NUMBER EDGES" in line:
+                m = int(line.split()[3])
+                break
+    else:
+        n, m = [int(x) for x in first_line.split(",")]
 
     for i in range(n):
         s = sys.stdin.readline()
@@ -25,7 +43,16 @@ else:
     ndd_edges = [[] for _ in range(n_ndds)]
 
     for i in range(m):
-        src, tgt, wt = [int(x) for x in sys.stdin.readline().split(",")]
+        tokens = sys.stdin.readline().split(',')
+        src = int(tokens[0])
+        tgt = int(tokens[1])
+        if new_file_format:
+            wt = float(tokens[2])
+        else:
+            wt = int(tokens[2])
+        if new_file_format:
+            src -= 1
+            tgt -= 1
         if tgt < n_pairs:   # Discard edges to NDDs
             if src < n_pairs:
                 pair_edges[src].append((tgt, wt))
